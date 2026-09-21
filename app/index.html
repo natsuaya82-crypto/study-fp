@@ -24,6 +24,7 @@
   --good:#54c084; --good-soft:#15301f;
   --bad:#f0806a; --bad-soft:#341a14;
   --warn:#e0b060; --warn-soft:#332809;
+  --f1:#6ba8d6; --f2:#c08ed4; --f3:#4fc2b0; --f4:#e0965a; --f5:#8fbf5e; --f6:#e08a95;
   --mark:#c9a33a; --mark-soft:#40350f; --mark-ink:#e8cd7a;
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
 }}
@@ -35,6 +36,7 @@
   --good:#54c084; --good-soft:#15301f;
   --bad:#f0806a; --bad-soft:#341a14;
   --warn:#e0b060; --warn-soft:#332809;
+  --f1:#6ba8d6; --f2:#c08ed4; --f3:#4fc2b0; --f4:#e0965a; --f5:#8fbf5e; --f6:#e08a95;
   --mark:#c9a33a; --mark-soft:#40350f; --mark-ink:#e8cd7a;
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
 }
@@ -150,55 +152,91 @@ main{max-width:720px; margin:0 auto; padding:16px 16px 104px}
 .done{color:var(--good)}
 
 /* ---- textbook ---- */
-.doc{font-size:15px}
-.doc h3{font-size:17px; margin:0 0 4px; font-weight:700; letter-spacing:.01em}
-.doc p{margin:0 0 12px}
-.doc ul{margin:0 0 12px; padding-left:1.15em}
-.doc li{margin:0 0 7px}
-.doc u{text-decoration:none; background:linear-gradient(transparent 62%, color-mix(in srgb, var(--accent) 26%, transparent) 0); padding:0 1px}
+.doc{font-size:15px; line-height:1.88; --fc:var(--accent)}
+.doc h3{
+  font-size:19px; margin:4px 0 18px; font-weight:700; letter-spacing:.01em;
+  padding-left:12px; border-left:4px solid var(--fc); line-height:1.5;
+}
+.doc p{margin:0 0 17px}
+.doc p.lead{
+  font-size:15px; margin:0 0 20px; padding:13px 15px; border-radius:10px;
+  background:var(--sunk);
+  background:color-mix(in srgb, var(--fc) 8%, var(--sunk));
+  border-left:3px solid var(--fc);
+}
+.doc ul{margin:0 0 20px; padding:0; list-style:none}
+.doc li{position:relative; padding-left:17px; margin:0 0 12px}
+.doc li::before{
+  content:""; position:absolute; left:2px; top:.78em;
+  width:6px; height:6px; border-radius:50%; background:var(--fc); opacity:.7;
+}
+.doc li li{margin:0 0 6px}
+.doc li > b:first-child{color:var(--fc)}
+.doc u{
+  text-decoration:none; padding:0 2px; border-radius:2px;
+  background:linear-gradient(transparent 58%, color-mix(in srgb, var(--fc) 24%, transparent) 0);
+}
 .doc b{font-weight:700}
 .doc sup{font-size:.7em}
-.tablewrap{overflow-x:auto; margin:0 0 12px; border:1px solid var(--line); border-radius:var(--r-s)}
-.doc table{border-collapse:collapse; width:100%; font-size:12.5px; min-width:340px}
-.doc th,.doc td{border-bottom:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top}
-.doc th{background:var(--sunk); font-weight:700; white-space:nowrap; font-size:11.5px; letter-spacing:.02em}
+.doc .box + .box{margin-top:-4px}
+.tablewrap{overflow-x:auto; margin:0 0 20px; border:1px solid var(--line); border-radius:var(--r-s)}
+.doc table{border-collapse:collapse; width:100%; font-size:12.5px; min-width:340px; line-height:1.7}
+.doc th,.doc td{border-bottom:1px solid var(--line); padding:10px 12px; text-align:left; vertical-align:top}
+.doc th{
+  background:var(--sunk);
+  background:color-mix(in srgb, var(--fc) 11%, var(--sunk));
+  color:var(--fc); font-weight:700; white-space:nowrap; font-size:11.5px; letter-spacing:.03em;
+}
+.doc tbody tr:nth-child(even) td{background:color-mix(in srgb, var(--fc) 4%, transparent)}
 .doc tr:last-child td{border-bottom:0}
-.box{border-radius:var(--r-s); padding:12px 13px; margin:0 0 12px; font-size:14px}
-.box .lab{font-size:10.5px; font-weight:700; letter-spacing:.09em; display:block; margin-bottom:5px}
+.box{border-radius:var(--r-s); padding:14px 16px; margin:0 0 20px; font-size:14px; line-height:1.82}
+.box .lab{font-size:10.5px; font-weight:700; letter-spacing:.09em; display:block; margin-bottom:7px}
 .box.ex{background:var(--sunk); border-left:3px solid var(--ink-3)}
 .box.ex .lab{color:var(--ink-3)}
-.box.ex .q{font-weight:700; margin-bottom:6px}
+.box.ex .q{font-weight:700; margin-bottom:9px; padding-bottom:9px; border-bottom:1px dashed var(--line-2)}
 .box.key{background:var(--accent-soft); border-left:3px solid var(--accent)}
 .box.key .lab{color:var(--accent-ink)}
-.box.key ul{margin:0; padding-left:1.1em}
-.box.key li{margin:0 0 4px}
+.box.key ul{margin:0; padding:0; list-style:none}
+.box.key li{margin:0 0 7px; padding-left:15px; position:relative}
+.box.key li::before{content:""; position:absolute; left:1px; top:.8em; width:5px; height:5px; border-radius:1px; background:var(--accent); opacity:.8}
 .box.warn{background:var(--warn-soft); border-left:3px solid var(--warn)}
 .box.warn .lab{color:var(--warn)}
 figure.fig{
-  margin:0 0 14px; background:var(--sunk); border-radius:var(--r-s);
+  margin:0 0 22px; background:var(--sunk); border-radius:var(--r-s);
   padding:14px 12px 11px; overflow-x:auto;
 }
 figure.fig svg{display:block; width:100%; max-width:100%; height:auto; color:var(--ink)}
+figure.fig .fc-s{stroke:var(--fc)}
+figure.fig .fc-f{fill:var(--fc)}
+figure.fig .ac-s{stroke:var(--accent)}
+figure.fig .ac-f{fill:var(--accent)}
+figure.fig .ng-s{stroke:var(--bad)}
+figure.fig .ng-f{fill:var(--bad)}
+figure.fig .mk-f{fill:var(--mark)}
+figure.fig .p1{fill:var(--f3)}
+figure.fig .p2{fill:var(--f2)}
+figure.fig .p3{fill:var(--f4)}
+figure.fig .dim{opacity:.55}
 figure.fig figcaption{
   margin-top:9px; font-size:12px; line-height:1.6; color:var(--ink-2); text-align:left;
 }
-.steps{counter-reset:st; margin:0 0 14px; display:flex; flex-direction:column; gap:9px}
+.steps{counter-reset:st; margin:0 0 22px; display:flex; flex-direction:column; gap:9px}
 .steps .st{display:flex; gap:11px; align-items:flex-start}
 .steps .st .n{
-  flex:none; width:23px; height:23px; border-radius:50%; background:var(--accent);
+  flex:none; width:24px; height:24px; border-radius:50%; background:var(--fc);
   color:#fff; font-size:12px; font-weight:700; display:grid; place-items:center; margin-top:2px;
 }
 .steps .st .c{flex:1; min-width:0}
 .steps .st .c b{display:block; font-size:14px; font-weight:700}
 .steps .st .c span{display:block; font-size:13.5px; color:var(--ink-2); line-height:1.7; margin-top:1px}
-.cmp{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:0 0 14px}
+.cmp{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 0 22px}
 @media (max-width:420px){ .cmp{grid-template-columns:1fr} }
 .cmp .side{border:1px solid var(--line); border-radius:var(--r-s); padding:11px 12px; background:var(--card)}
 .cmp .side h4{margin:0 0 7px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:6px}
 .cmp .side h4 .dot{width:8px; height:8px; border-radius:50%; flex:none}
 .cmp .side ul{margin:0; padding-left:1.05em}
 .cmp .side li{font-size:13px; line-height:1.65; margin:0 0 5px}
-.cmp .a h4 .dot{background:var(--accent)}
+.cmp .a h4 .dot{background:var(--fc)}
 .cmp .b h4 .dot{background:var(--f4)}
 
 /* ---- quiz ---- */
@@ -387,7 +425,7 @@ mark.hl{
 
 <div id="selbar" hidden onmousedown="event.preventDefault()" ontouchstart="event.preventDefault()">
   <button class="mkadd" data-act="mkadd">線を引く</button>
-  <button class="mkdel" data-act="mkdel">消す</button>
+  <button class="mkdel" data-act="mkdel">線を消す</button>
 </div>
 
 <nav id="nav"><div class="row">
@@ -641,7 +679,7 @@ function renderHome(){
   }
   var nextT = nextUnread();
   if(nextT){
-    h += todo('▤','次の章を読む', TB[nextT.f].title+'／'+nextT.t.title, 'read:'+nextT.t.id);
+    h += todo('▤','次の章を読む', TB[nextT.f].title+'／'+nextT.t.title, 'topic:'+nextT.t.id);
   }
   if(answeredN >= 40){
     h += todo('▣','模試60問', '本番と同じ構成。合格ラインは36問', 'mock');
@@ -718,8 +756,8 @@ function renderBook(){
       h += '<button class="bm '+(bmOn?'on':'')+'" data-act="bm:'+t.id+'">'+(bmOn?'★ ブックマーク済み':'☆ ブックマーク')+'</button>';
       h += '<button id="mkCount" data-act="mkclear:'+t.id+'"'+(nMk?'':' hidden')+'>線を消す（'+nMk+'）</button>';
       h += '</div>';
-      h += '<div class="mkhint">大事なところは<b>なぞって選ぶ</b>と「線を引く」が出ます（スマホは長押ししてから範囲を調整）。引いた線は「教科書」の先頭にまとまります。</div>';
-      h += '<div class="card"><div class="doc">';
+      h += '<div class="mkhint">大事なところは<b>なぞって選ぶ</b>と「線を引く」が出ます（スマホは長押しして範囲を調整）。<br>引いた線を<b>タップすると「線を消す」</b>が出ます。線は「教科書」の先頭に一覧でまとまります。</div>';
+      h += '<div class="card" style="padding:18px 16px"><div class="doc" style="--fc:var(--'+f+')">';
       h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+fieldChip(f)+tagChips(t)+'</div>';
       h += '<h3>'+esc(t.title)+'</h3>';
       h += renderBlocks(t.blocks, t.id);
@@ -915,7 +953,7 @@ function renderBlocks(blocks, tid){
   tid = tid || '';
   return (blocks||[]).map(function(b, bi){
     var k = 'b'+bi;
-    if(b.t==='p') return '<p'+mk(tid,k)+'>'+b.x+'</p>';
+    if(b.t==='p') return '<p'+mk(tid,k)+(bi===0?' class="lead"':'')+'>'+b.x+'</p>';
     if(b.t==='ul') return '<ul>'+b.x.map(function(li,li2){
         return '<li'+mk(tid,k+'.'+li2)+'>'+li+'</li>'; }).join('')+'</ul>';
     if(b.t==='table'){
@@ -1566,6 +1604,19 @@ function pickWeak(n){
 
 /* ---------- actions ---------- */
 document.addEventListener('click', function(ev){
+  if(ev.target.closest){
+    var hitMark = ev.target.closest('mark.hl');
+    if(hitMark && !ev.target.closest('[data-act]')){
+      var selNow = window.getSelection();
+      if(selNow && selNow.isCollapsed){
+        var rg = document.createRange();
+        rg.selectNodeContents(hitMark);
+        selNow.removeAllRanges(); selNow.addRange(rg);
+        updateSelBar();
+        return;
+      }
+    }
+  }
   var el2 = ev.target.closest ? ev.target.closest('[data-act],[data-pick],[data-sugg]') : null;
   if(!el2) return;
   if(el2.hasAttribute('data-pick')){ pick(Number(el2.dataset.pick)); return; }
