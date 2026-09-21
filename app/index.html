@@ -251,6 +251,12 @@ figure.fig figcaption{
   background:var(--sunk); border-radius:99px; padding:3px 9px; min-width:48px; text-align:center}
 .clock.warn{background:var(--warn-soft); color:var(--warn)}
 .clock.over{background:var(--bad-soft); color:var(--bad)}
+.star{flex:none; width:32px; height:32px; border-radius:9px; border:1px solid var(--line-2);
+  background:var(--card); color:var(--ink-3); font-size:15px; line-height:1; display:grid; place-items:center}
+.star.on{background:var(--mark-soft); border-color:var(--mark); color:var(--mark-ink)}
+.qbmrow{display:flex; align-items:flex-start; gap:9px; padding:11px 0; border-top:1px solid var(--line)}
+.qbmrow:first-of-type{border-top:0}
+.qbmrow .b{flex:1; min-width:0}
 .qtime{margin-left:auto; font-size:11.5px; font-weight:700; color:var(--ink-3);
   background:var(--card); border-radius:99px; padding:2px 9px;
   font-family:"IBM Plex Mono",ui-monospace,monospace}
@@ -441,6 +447,20 @@ mark.hl{
 .hlitem:first-child{border-top:0}
 .hlitem .src{font-size:11px; color:var(--ink-3); font-weight:700; margin-bottom:4px; display:flex; gap:6px; align-items:center}
 .hlitem .tx{font-size:13.5px; line-height:1.7}
+#dlg{position:fixed; inset:0; z-index:60; background:rgba(10,14,12,.55);
+  display:flex; align-items:center; justify-content:center; padding:20px}
+#dlg[hidden]{display:none!important}
+#dlg .box{background:var(--card); border-radius:var(--r); padding:18px 18px 16px;
+  width:100%; max-width:340px; box-shadow:0 12px 40px rgba(0,0,0,.35)}
+#dlg .msg{font-size:14.5px; line-height:1.7; margin:0 0 14px}
+#dlg .msg b{font-weight:700}
+#dlg input{width:100%; font:inherit; font-size:15px; padding:10px 12px; margin-bottom:14px;
+  border:1.5px solid var(--line-2); border-radius:var(--r-s); background:var(--sunk); color:var(--ink)}
+#dlg input:focus{outline:0; border-color:var(--accent); background:var(--card)}
+#dlg .row{display:flex; gap:8px}
+#dlg .row button{flex:1; border-radius:9px; padding:10px; font-size:14px; font-weight:700; border:1px solid var(--line-2); background:var(--card)}
+#dlg .row .ok{background:var(--accent); border-color:var(--accent); color:#fff}
+#dlg .row .danger{background:var(--bad); border-color:var(--bad); color:#fff}
 .resume{background:var(--warn-soft); border:1px solid var(--warn); border-radius:var(--r); padding:14px 15px; margin-bottom:12px}
 .resume b{display:block; font-size:14px; margin-bottom:3px}
 .resume p{margin:0 0 11px; font-size:12.5px; color:var(--ink-2); line-height:1.6}
@@ -508,9 +528,12 @@ mark.hl{
   <section class="view" id="v-drill" hidden></section>
   <section class="view" id="v-weak" hidden></section>
   <section class="view" id="v-quiz" hidden></section>
+  <section class="view" id="v-rank" hidden></section>
   <section class="view" id="v-ask" hidden></section>
   <section class="view" id="v-set" hidden></section>
 </main>
+
+<div id="dlg" hidden></div>
 
 <div id="selbar" hidden onmousedown="event.preventDefault()" ontouchstart="event.preventDefault()">
   <button class="mkadd" data-act="mkadd">線を引く</button>
@@ -522,7 +545,7 @@ mark.hl{
   <button data-go="book"><span class="ic">▤</span>教科書</button>
   <button data-go="drill"><span class="ic">✎</span>演習</button>
   <button data-go="weak"><span class="ic">◈</span>弱点</button>
-  <button data-go="ask" id="askTab"><span class="ic">✆</span>質問</button>
+  <button data-go="rank"><span class="ic">◤</span>ランキング</button>
 </div></nav>
 
 <script src="data/f1.js"></script>
@@ -583,7 +606,7 @@ var INTERVALS = [1,2,4,8,16];
 var LS = 'fp3-drill-v1';
 
 /* ---------- state ---------- */
-var S = { stats:{}, read:{}, sessions:[], exam:'2026-10-02', gen:[], marks:{}, bm:[], quiz:null };
+var S = { stats:{}, read:{}, sessions:[], exam:'2026-10-02', gen:[], marks:{}, bm:[], qbm:[], quiz:null };
 var db = null, dbDoc = null, saveTimer = null, dirty = false;
 var sampleFn = null;
 
@@ -609,6 +632,10 @@ function merge(o){
     o.bm.forEach(function(b){ if(b && b.id && !hb[b.id]){ hb[b.id]=1; S.bm.push(b); } });
   }
   if(o.quiz && !S.quiz) S.quiz = o.quiz;
+  if(o.qbm && o.qbm.length){
+    var hq = {}; S.qbm.forEach(function(x){ hq[x.id]=1; });
+    o.qbm.forEach(function(x){ if(x && x.id && !hq[x.id]){ hq[x.id]=1; S.qbm.push(x); } });
+  }
   if(o.gen && o.gen.length){
     var have = {}; S.gen.forEach(function(g){ have[g.id]=1; });
     o.gen.forEach(function(g){ if(g && g.id && !have[g.id]){ have[g.id]=1; S.gen.push(g); } });
@@ -637,7 +664,7 @@ var pushing = false;
 function pushRemote(){
   if(!dbDoc || pushing || !dirty) return;
   pushing = true; dirty = false;
-  var payload = { stats:S.stats, read:S.read, sessions:S.sessions.slice(0,60), exam:S.exam, gen:S.gen.slice(-150), marks:S.marks, bm:S.bm.slice(-200), quiz:S.quiz, at:Date.now() };
+  var payload = { stats:S.stats, read:S.read, sessions:S.sessions.slice(0,60), exam:S.exam, gen:S.gen.slice(-150), marks:S.marks, bm:S.bm.slice(-200), qbm:S.qbm.slice(-300), quiz:S.quiz, at:Date.now() };
   dbDoc.set(payload).then(function(){
     pushing=false;
     if(dirty) pushRemote(); else setSave('saved');
@@ -718,6 +745,23 @@ function speedScore(sec, ex){
   var target = EXAMS[ex || examScope].sec;
   return Math.max(0, Math.min(100, Math.round(target/sec*100)));
 }
+/* 問題ごとのブックマーク */
+function qbmOn(id){ return S.qbm.some(function(x){ return x.id === id; }); }
+function toggleQbm(id){
+  if(qbmOn(id)) S.qbm = S.qbm.filter(function(x){ return x.id !== id; });
+  else S.qbm.push({id:id, at:Date.now()});
+  scheduleSave();
+}
+function qbmList(scope){
+  return S.qbm.slice().reverse()
+    .map(function(x){ return QMAP[x.id]; })
+    .filter(function(q){ return q && (!scope || exOf(q) === scope); });
+}
+function starBtn(id){
+  var on = qbmOn(id);
+  return '<button class="star'+(on?' on':'')+'" data-act="qbm:'+id+'" aria-pressed="'+on+'" '+
+    'aria-label="'+(on?'ブックマークを外す':'あとで見直す')+'">'+(on?'★':'☆')+'</button>';
+}
 function gradeOf(score){
   if(score === null) return {g:'—', c:'var(--ink-3)'};
   if(score >= 90) return {g:'S', c:'var(--good)'};
@@ -769,7 +813,7 @@ function shuffle(a){
 /* ---------- navigation ---------- */
 var cur = 'home';
 function show(id){
-  ['home','book','drill','weak','quiz','ask','set'].forEach(function(v){
+  ['home','book','drill','weak','quiz','rank','ask','set'].forEach(function(v){
     document.getElementById('v-'+v).hidden = (v!==id);
   });
   cur = id;
@@ -777,7 +821,7 @@ function show(id){
   if(sb && id!=='book') sb.hidden = true;
   if(id !== 'quiz') stopClock();
   var tab = (id==='quiz') ? quizTab : (id==='set' ? null : id);
-  if(id==='ask') tab = 'ask';
+  if(id==='ask') tab = null;
   Array.prototype.forEach.call(document.querySelectorAll('#nav button'), function(b){
     b.setAttribute('aria-current', String(b.dataset.go===tab));
   });
@@ -1198,6 +1242,10 @@ function renderDrill(){
     '<button class="go" data-act="mock">開始</button></div>';
   h += '<div class="todo"><span class="t"><b>ランダム20問</b><small>全分野からまんべんなく</small></span>'+
     '<button class="go" data-act="random">開始</button></div>';
+  var qb = qbmList(examScope);
+  h += '<div class="todo"><span class="t"><b>★ ブックマークした問題</b><small>'+
+    (qb.length ? qb.length+'問。気になった問題をあとで見直す' : '問題の右上の☆を押すとここに溜まります')+'</small></span>'+
+    '<button class="go" data-act="qbmquiz"'+(qb.length?'':' disabled style="opacity:.4"')+'>開始</button></div>';
   if(sampleFn){
     h += '<div class="todo"><span class="t"><b>あなた専用の問題を作る</b><small>'+
       (gen.busy ? '作成中…' : '間違えた問題をもとにClaudeが新しく出題')+'</small></span>'+
@@ -1370,7 +1418,6 @@ function renderWeak(){
   if(worst) h += '<p class="tiny muted" style="margin:8px 0 0">いま一番弱いのは<b>'+esc(TB[worst.f].title)+'</b>（'+worst.a+'%）。</p>';
   h += '</div>';
 
-  h += renderRank();
 
   if(due.length){
     h += '<div class="card"><div class="todo"><span class="t"><b>復習のタイミング</b><small>'+due.length+'問</small></span>'+
@@ -1399,6 +1446,20 @@ function renderWeak(){
     h += '</div>';
   }
 
+  var qb = qbmList(examScope);
+  if(qb.length){
+    h += '<div class="card"><p class="eyebrow">★ ブックマークした問題（'+qb.length+'）</p>';
+    h += '<button class="btn primary" style="margin-bottom:4px" data-act="qbmquiz">この'+qb.length+'問を解く</button>';
+    qb.slice(0,30).forEach(function(q){
+      h += '<div class="qbmrow"><span class="b"><span class="m" style="display:flex;gap:6px;align-items:center;margin-bottom:4px">'+
+        fieldChip(q.f)+'</span><span class="txt" style="font-size:13.5px;line-height:1.65">'+rich(q.q)+'</span>'+
+        '<span class="wqact"><button class="solve" data-act="one:'+q.id+'">この問題を解く</button>'+
+        (TMAP[q.t]?'<button class="ref" data-act="topic:'+q.t+'">→ '+esc(TMAP[q.t].t.title)+'</button>':'')+
+        '</span></span>'+starBtn(q.id)+'</div>';
+    });
+    if(qb.length>30) h += '<p class="tiny muted" style="margin-top:10px">ほか'+(qb.length-30)+'問</p>';
+    h += '</div>';
+  }
   h += '<div class="card"><p class="eyebrow">間違えた問題（'+weak.length+'）</p>';
   if(!weak.length){
     h += '<div class="empty">まだ記録がありません。<br>演習を始めると、間違えた問題がここに集まります。</div>';
@@ -1408,7 +1469,8 @@ function renderWeak(){
       var st = stat(q.id);
       var rate = Math.round(st.w/st.n*100);
       h += '<div class="wq"><div class="m">'+fieldChip(q.f)+
-        '<span class="rate num">誤答率 '+rate+'%（'+st.w+'/'+st.n+'）</span></div>';
+        '<span class="rate num">誤答率 '+rate+'%（'+st.w+'/'+st.n+'）</span>'+
+        '<span style="flex:1"></span>'+starBtn(q.id)+'</div>';
       h += '<div class="txt">'+rich(q.q)+'</div>';
       var info = TMAP[q.t];
       h += '<div class="wqact"><button class="solve" data-act="one:'+q.id+'">この問題を解く</button>';
@@ -1419,6 +1481,46 @@ function renderWeak(){
   }
   h += '</div>';
   document.getElementById('v-weak').innerHTML = h;
+}
+
+/* ---------- 画面内ダイアログ ----------
+   公開ページでは window.confirm / window.prompt がブロックされて何も起きないため、
+   自前のダイアログに置き換えている */
+var dlg = null;
+function askConfirm(msg, okLabel, danger, onOk){
+  dlg = {msg:msg, ok:okLabel||'実行', danger:!!danger, onOk:onOk};
+  renderDlg();
+}
+function askText(msg, value, onOk){
+  dlg = {msg:msg, ok:'保存', input:true, value:value||'', onOk:onOk};
+  renderDlg();
+}
+function closeDlg(){ dlg = null; renderDlg(); }
+function renderDlg(){
+  var box = document.getElementById('dlg');
+  if(!box) return;
+  if(!dlg){ box.hidden = true; box.innerHTML = ''; return; }
+  var h = '<div class="box"><p class="msg">'+rich(dlg.msg)+'</p>';
+  if(dlg.input) h += '<input id="dlgInput" type="text" value="'+esc(dlg.value)+'" maxlength="60">';
+  h += '<div class="row"><button data-act="dlgno">やめる</button>'+
+       '<button class="'+(dlg.danger?'danger':'ok')+'" data-act="dlgyes">'+esc(dlg.ok)+'</button></div></div>';
+  box.innerHTML = h;
+  box.hidden = false;
+  var inp = document.getElementById('dlgInput');
+  if(inp){
+    setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(e){} }, 50);
+    inp.addEventListener('keydown', function(ev){ if(ev.key === 'Enter'){ ev.preventDefault(); confirmDlg(); } });
+  }
+}
+function confirmDlg(){
+  if(!dlg) return;
+  var fn = dlg.onOk, val = null;
+  if(dlg.input){
+    var inp = document.getElementById('dlgInput');
+    val = inp ? String(inp.value).trim() : '';
+  }
+  dlg = null; renderDlg();
+  if(fn) fn(val);
 }
 
 /* ---------- 単元ランキング ---------- */
@@ -1452,8 +1554,15 @@ function rankRows(){
   return rows.filter(function(r){ return r.done >= 3; });
 }
 function renderRank(){
+  var box = document.getElementById('v-rank');
+  if(!box) return;
   var rows = rankRows();
-  var h = '<div class="card"><p class="eyebrow">'+esc(scopeName())+'ランキング</p>';
+  var h = '<h2 class="disp" style="font-size:19px;margin:2px 0 10px">ランキング</h2>';
+  h += '<div class="seg">'+
+    '<button data-act="scope:g" aria-pressed="'+(examScope==="g")+'">学科</button>'+
+    '<button data-act="scope:j" aria-pressed="'+(examScope==="j")+'">実技</button></div>';
+  h += '<div class="card"><p class="eyebrow">'+esc(scopeName())+'　'+
+    (examScope==='j'?'本番は20問60分＝1問180秒':'本番は60問60分＝1問60秒')+'</p>';
   h += '<div class="fchips" style="--cc:var(--accent)">'+
     '<button data-act="ru:topic" aria-pressed="'+(rankUnit==='topic')+'">単元別</button>'+
     '<button data-act="ru:field" aria-pressed="'+(rankUnit==='field')+'">分野別</button>'+
@@ -1465,7 +1574,8 @@ function renderRank(){
   if(!rows.length){
     h += '<div class="empty">3問以上解いた'+(rankUnit==='topic'?'単元':'分野')+
       'から並びます。<br>まずは解いてみてください。</div></div>';
-    return h;
+    box.innerHTML = h + askEntry();
+    return;
   }
   rows.sort(function(a,b){
     if(rankBy === 'acc') return (b.acc||0)-(a.acc||0);
@@ -1495,7 +1605,24 @@ function renderRank(){
   if(slow) h += '<p class="tiny muted" style="margin:6px 0 0">いちばん時間を食っているのは<b>'+
     esc(slow.name)+'</b>（'+fmtSec(slow.sec)+'/問）。本番の目安は1問'+EXAMS[examScope].sec+'秒。</p>';
   h += '</div>';
-  return h;
+  var lows = rows.slice().sort(function(a,b){
+    return (a.score===null?999:a.score)-(b.score===null?999:b.score); }).slice(0,3);
+  if(lows.length){
+    h += '<div class="card"><p class="eyebrow">下位から出題する</p>';
+    lows.forEach(function(r){
+      h += '<div class="todo"><span class="t"><b>'+esc(r.name)+'</b><small>'+
+        (r.acc===null?'—':r.acc+'%')+'　'+fmtSec(r.sec)+'/問</small></span>'+
+        '<button class="go" data-act="'+(rankUnit==='field'?'field:':'topicquiz:')+r.key+'">解く</button></div>';
+    });
+    h += '</div>';
+  }
+  box.innerHTML = h + askEntry();
+}
+function askEntry(){
+  if(!sampleFn) return '';
+  return '<div class="card"><p class="eyebrow">わからないことがあったら</p>'+
+    '<p class="tiny muted" style="margin:0 0 10px">教科書や問題の画面にある「質問する」からでも開けます。</p>'+
+    '<button class="btn" data-act="ask">Claudeに質問する</button></div>';
 }
 
 /* ---------- settings ---------- */
@@ -1507,7 +1634,7 @@ function renderSet(){
   h += '<div class="card"><p class="eyebrow">記録</p>';
   h += '<p class="tiny">解答した問題 '+QS.filter(function(q){return answered(q.id)}).length+' / '+QS.length+'　'+
        '読了した章 '+Object.keys(S.read).length+' / '+ALLTOPICS+'</p>';
-  h += '<p class="tiny">引いた線 '+allMarks().length+'　ブックマーク '+S.bm.length+'</p>';
+  h += '<p class="tiny">引いた線 '+allMarks().length+'　章ブックマーク '+S.bm.length+'　問題ブックマーク '+S.qbm.length+'</p>';
   h += '<p class="tiny muted" style="margin-top:8px">記録はこの端末と、ログインしているアカウントの両方に保存されます。'+
        (dbDoc ? '' : '（現在この画面では端末内のみに保存中）')+'</p>';
   h += '<button class="btn ghost" style="margin-top:12px;color:var(--bad);border-color:var(--bad)" data-act="reset">学習記録をすべて消去</button>';
@@ -1868,7 +1995,8 @@ function renderQuiz(){
        '<span class="clock num" id="clock" title="この問題にかかっている時間">0:00</span></div>';
   h += '<div class="card">';
   h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">'+fieldChip(q.f)+
-       '<span class="tiny muted" style="font-size:11px">'+esc(quiz.label)+'</span></div>';
+       '<span class="tiny muted" style="font-size:11px;flex:1;min-width:0">'+esc(quiz.label)+'</span>'+
+       starBtn(q.id)+'</div>';
   if(q.ctx) h += '<div class="qctx">'+q.ctx+'</div>';
   h += '<div class="qtext">'+rich(q.q)+'</div>';
   h += '<div id="opts">';
@@ -2082,6 +2210,20 @@ document.addEventListener('click', function(ev){
     var inf = TMAP[v];
     startQuiz(tq, inf ? inf.t.title : '章別', 'book', {kind:'topic', f:(inf?inf.f:null), ex:'g'}); return;
   }
+  if(k==='qbm'){
+    toggleQbm(v);
+    var bq = document.querySelector('[data-act="qbm:'+v+'"]');
+    if(bq){ var on = qbmOn(v); bq.className = 'star'+(on?' on':''); bq.textContent = on?'★':'☆';
+      bq.setAttribute('aria-pressed', String(on)); }
+    if(cur === 'weak') renderWeak();
+    renderDrill();
+    return;
+  }
+  if(k==='qbmquiz'){
+    var qbq = qbmList(examScope);
+    if(qbq.length) startQuiz(shuffle(qbq), '★ ブックマーク '+qbq.length+'問', 'drill', {kind:'qbm', ex:examScope});
+    return;
+  }
   if(k==='one'){
     var oq = QMAP[v];
     if(oq) startQuiz([oq], 'この1問', 'weak', {kind:'one', f:oq.f, ex:exOf(oq)});
@@ -2106,10 +2248,10 @@ document.addEventListener('click', function(ev){
     var info3 = selInfo(), tid3 = bookView && bookView.topic;
     if(info3 && tid3){
       S.marks[tid3] = S.marks[tid3] || {};
-      var cur = ranges(tid3, info3.key);
+      var curRanges = ranges(tid3, info3.key);
       var next = (k==='mkadd')
-        ? mergeRanges(cur.concat([[info3.s, info3.e]]))
-        : subRange(cur, info3.s, info3.e);
+        ? mergeRanges(curRanges.concat([[info3.s, info3.e]]))
+        : subRange(curRanges, info3.s, info3.e);
       if(next.length) S.marks[tid3][info3.key] = next; else delete S.marks[tid3][info3.key];
       if(!Object.keys(S.marks[tid3]).length) delete S.marks[tid3];
       scheduleSave();
@@ -2121,10 +2263,10 @@ document.addEventListener('click', function(ev){
     return;
   }
   if(k==='mkclear'){
-    if(window.confirm('この章の線をすべて消します。よろしいですか？')){
-      delete S.marks[v]; scheduleSave(); renderBook(); renderHome();
-    }
     var b3 = document.getElementById('selbar'); if(b3) b3.hidden = true;
+    askConfirm('この章の線を<b>すべて消します</b>。元に戻せません。', '消す', true, function(){
+      delete S.marks[v]; scheduleSave(); renderBook(); renderHome();
+    });
     return;
   }
   if(k==='bm'){
@@ -2134,27 +2276,27 @@ document.addEventListener('click', function(ev){
     } else {
       var info2 = TMAP[v];
       var def = info2 ? info2.t.title : 'ブックマーク';
-      var nm = window.prompt('ブックマークの名前（あとで探しやすい名前に）', def);
-      if(nm === null) return;
-      nm = String(nm).trim() || def;
-      S.bm.push({ id:'bm'+Date.now(), topic:v, name:nm.slice(0,60), at:Date.now() });
+      askText('ブックマークの名前（あとで探しやすい名前に）', def, function(nm){
+        S.bm.push({ id:'bm'+Date.now(), topic:v, name:(nm||def).slice(0,60), at:Date.now() });
+        scheduleSave(); renderBook();
+      });
+      return;
     }
     scheduleSave(); renderBook(); return;
   }
   if(k==='bmren'){
     var t2 = S.bm.filter(function(b){ return b.id===v; })[0];
-    if(t2){
-      var nn = window.prompt('新しい名前', t2.name);
-      if(nn !== null && String(nn).trim()){ t2.name = String(nn).trim().slice(0,60); scheduleSave(); renderBook(); }
-    }
+    if(t2) askText('新しい名前', t2.name, function(nn){
+      if(nn){ t2.name = nn.slice(0,60); scheduleSave(); renderBook(); }
+    });
     return;
   }
   if(k==='bmdel'){ S.bm = S.bm.filter(function(b){ return b.id!==v; }); scheduleSave(); renderBook(); return; }
   if(k==='resume'){ resumeQuiz(); return; }
   if(k==='dropresume'){ S.quiz=null; scheduleSave(); renderHome(); return; }
   if(k==='cf'){ chartField = v || null; renderWeak(); return; }
-  if(k==='rb'){ rankBy = v; renderWeak(); return; }
-  if(k==='ru'){ rankUnit = v; renderWeak(); return; }
+  if(k==='rb'){ rankBy = v; renderRank(); return; }
+  if(k==='ru'){ rankUnit = v; renderRank(); return; }
   if(k==='ask'){ openAsk(null, null); return; }
   if(k==='askq'){ openAsk('q', v); return; }
   if(k==='askt'){ openAsk('t', v); return; }
@@ -2164,12 +2306,15 @@ document.addEventListener('click', function(ev){
   if(k==='gen'){ generate(Number(v)||8, null); return; }
   if(k==='genf'){ generate(8, v); return; }
   if(k==='reset'){
-    if(window.confirm('学習記録をすべて消去します。元に戻せません。よろしいですか？')){
-      S.stats={}; S.read={}; S.sessions=[];
+    askConfirm('学習記録を<b>すべて消去</b>します。解答の記録・読了・引いた線・ブックマーク・'+
+      '得点の推移が消え、<b>元に戻せません</b>。', 'すべて消去する', true, function(){
+      S.stats={}; S.read={}; S.sessions=[]; S.marks={}; S.bm=[]; S.qbm=[]; S.quiz=null;
       scheduleSave(); render(); renderSet();
-    }
+    });
     return;
   }
+  if(k==='dlgyes'){ confirmDlg(); return; }
+  if(k==='dlgno'){ closeDlg(); return; }
 });
 
 /* ---------- selection ---------- */
@@ -2187,7 +2332,7 @@ document.addEventListener('scroll', function(){
 }, true);
 
 /* ---------- boot ---------- */
-function render(){ renderHome(); renderBook(); renderDrill(); renderWeak(); renderAsk(); }
+function render(){ renderHome(); renderBook(); renderDrill(); renderWeak(); renderRank(); renderAsk(); }
 rebuildPools();
 loadLocal();
 registerGen();
