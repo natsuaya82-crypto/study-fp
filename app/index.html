@@ -246,10 +246,17 @@ figure.fig figcaption{
 .qctx{
   background:var(--sunk); border-left:3px solid var(--ink-3); border-radius:var(--r-s);
   padding:12px 14px; margin:8px 0 14px; font-size:13.5px; line-height:1.75;
+  overflow-x:auto; -webkit-overflow-scrolling:touch;
 }
-.qctx table{border-collapse:collapse; width:100%; margin:8px 0 2px; font-size:12.5px}
-.qctx th,.qctx td{border:1px solid var(--line-2); padding:6px 8px; text-align:left; vertical-align:top}
-.qctx th{background:var(--card); font-weight:700; white-space:nowrap; width:42%}
+.qctx table{border-collapse:collapse; width:100%; margin:8px 0 2px; font-size:12.5px; table-layout:fixed}
+.qctx th,.qctx td{
+  border:1px solid var(--line-2); padding:6px 8px; text-align:left; vertical-align:top;
+  word-break:break-word; overflow-wrap:anywhere;
+}
+.qctx th{background:var(--card); font-weight:700}
+.qctx tr > th:first-child:not(:only-child){width:40%}
+.qctx tr > th:first-child:nth-last-child(3) ~ td,
+.qctx tr > th:first-child:nth-last-child(3){width:auto}
 .qtext{font-size:16px; line-height:1.8; font-weight:500; margin:6px 0 16px}
 .opt{
   width:100%; text-align:left; background:var(--card); border:1.5px solid var(--line-2);
@@ -506,6 +513,7 @@ mark.hl{
 <script src="data/j1.js"></script>
 <script src="data/j2.js"></script>
 <script src="data/j3.js"></script>
+<script src="data/j4.js"></script>
 <script>
 (function(){
 "use strict";
