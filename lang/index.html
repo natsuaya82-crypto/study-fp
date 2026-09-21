@@ -50,7 +50,11 @@ body{margin:0; background:var(--paper); color:var(--ink);
   font-size:15px; line-height:1.75; -webkit-text-size-adjust:100%}
 h1,h2,h3,.disp{font-family:"Zen Kaku Gothic New","Hiragino Sans",system-ui,sans-serif; text-wrap:balance}
 .num{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
-button{font:inherit; color:inherit; cursor:pointer}
+button{font:inherit; color:inherit; cursor:pointer;
+  -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; touch-action:manipulation}
+/* 教科書の本文だけは、なぞって線を引けるように選択を許す */
+.doc, .doc *{-webkit-user-select:text; user-select:text}
+.doc button, .tools button, #selbar button{-webkit-user-select:none; user-select:none}
 .tgt{font-family:"Zen Kaku Gothic New","Hiragino Sans",system-ui,sans-serif; letter-spacing:.02em}
 
 #top{position:sticky; top:env(safe-area-inset-top,0px); z-index:20;
@@ -2154,6 +2158,8 @@ function dueList(){
 
 /* ---------- 共通 ---------- */
 function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+/* 問題文・解説の中の簡単な強調タグだけを生かす。それ以外はすべて無害化する */
+function rich(s){ return esc(s).replace(/&lt;(\/?)(b|u|i|em|strong|small|br)&gt;/gi, '<$1$2>'); }
 function strip(h){ return String(h).replace(/<[^>]*>/g,''); }
 function shuffle(a){ a = a.slice(); for(var i=a.length-1;i>0;i--){ var j = Math.floor(Math.random()*(i+1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
 function fieldChip(f){ return TB[f] ? '<span class="chip f" style="background:var(--'+f+')">'+esc(TB[f].short)+'</span>' : ''; }
@@ -2595,7 +2601,7 @@ function renderWeak(){
     weak.slice(0,40).forEach(function(q){
       var s = stat(q.id);
       h += '<div class="wq"><div class="m">'+fieldChip(q.f)+'<span class="rate num">誤答率 '+Math.round(s.w/s.n*100)+'%（'+s.w+'/'+s.n+'）</span>'+
-        (q.say?sayBtn(q.say):'')+'</div><div class="txt">'+esc(q.q)+'</div>';
+        (q.say?sayBtn(q.say):'')+'</div><div class="txt">'+rich(q.q)+'</div>';
       var i = TMAP[q.t];
       if(i) h += '<div style="margin-top:5px"><button style="background:none;border:0;padding:0;font-size:12px;font-weight:700;color:var(--accent-ink);text-decoration:underline" data-act="topic:'+q.t+'">→ '+esc(i.t.title)+'</button></div>';
       h += '</div>'; });
@@ -2685,7 +2691,7 @@ function renderQuiz(){
   h += '<div class="card"><div class="qtop">'+fieldChip(q.f)+
     '<span class="tiny muted" style="font-size:11px">'+esc(quiz.label)+'</span>'+
     (canHearBefore(q) ? sayBtn(q.say) : '')+'</div>';
-  h += '<div class="qtext">'+esc(q.q)+'</div>';
+  h += '<div class="qtext">'+rich(q.q)+'</div>';
   var ans = hard && !quiz.shown ? answersFor(q) : null;
   if(ans){
     h += '<input id="ans" class="ansinp" type="text" inputmode="text" autocomplete="off" '+
@@ -2723,7 +2729,7 @@ function finish(q, ok, extra, got){
   var h = '<div class="verdict '+(ok?'ok':'ng')+'"><div class="v">'+(ok?'◎ 正解':'× 不正解')+'</div>';
   if(got && !ok) h += '<div class="yourans">あなたの答え：<b>'+esc(got)+'</b></div>';
   if(extra) h += '<div style="margin-bottom:7px">'+(ok?'':'正解：')+'<b class="tgt" style="font-size:16px">'+esc(extra)+'</b> '+(q.say?sayBtn(q.say):'')+'</div>';
-  h += '<div>'+q.e+'</div>';
+  h += '<div>'+rich(q.e)+'</div>';
   if(info) h += '<div class="lnk"><button data-act="topic:'+q.t+'">→ 教科書：'+esc(info.t.title)+'</button></div>';
   h += '</div>';
   if(sampleFn) h += '<button class="askbtn" data-act="askq:'+q.id+'">この問題について質問する</button>';
@@ -2787,10 +2793,10 @@ function renderResult(){
     h += '<div class="card"><p class="eyebrow">間違えた問題（'+wrong.length+'）</p>';
     wrong.forEach(function(q){
       h += '<div class="wq"><div class="m">'+fieldChip(q.f)+(q.say?sayBtn(q.say):'')+'</div>'+
-        '<div class="txt">'+esc(q.q)+'</div>'+
+        '<div class="txt">'+rich(q.q)+'</div>'+
         (q.type==='order' ? '<div class="txt tgt" style="margin-top:4px;font-weight:700">'+esc(q.w.join(' '))+'</div>' :
          '<div class="txt tgt" style="margin-top:4px;font-weight:700">'+esc(q.c[q.a])+'</div>')+
-        '<div class="txt muted" style="margin-top:4px">'+q.e+'</div></div>'; });
+        '<div class="txt muted" style="margin-top:4px">'+rich(q.e)+'</div></div>'; });
     h += '<button class="btn primary" style="margin-top:12px" data-act="retry">間違えた'+wrong.length+'問をもう一度</button></div>';
   } else h += '<div class="card"><div class="empty">全問正解です。</div></div>';
   h += '<div class="btnrow" style="margin-top:12px"><button class="btn" data-act="go:drill">練習メニュー</button>'+

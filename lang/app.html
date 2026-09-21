@@ -44,7 +44,11 @@ body{margin:0; background:var(--paper); color:var(--ink);
   font-size:15px; line-height:1.75; -webkit-text-size-adjust:100%}
 h1,h2,h3,.disp{font-family:"Zen Kaku Gothic New","Hiragino Sans",system-ui,sans-serif; text-wrap:balance}
 .num{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
-button{font:inherit; color:inherit; cursor:pointer}
+button{font:inherit; color:inherit; cursor:pointer;
+  -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; touch-action:manipulation}
+/* 教科書の本文だけは、なぞって線を引けるように選択を許す */
+.doc, .doc *{-webkit-user-select:text; user-select:text}
+.doc button, .tools button, #selbar button{-webkit-user-select:none; user-select:none}
 .tgt{font-family:"Zen Kaku Gothic New","Hiragino Sans",system-ui,sans-serif; letter-spacing:.02em}
 
 #top{position:sticky; top:env(safe-area-inset-top,0px); z-index:20;
@@ -483,6 +487,8 @@ function dueList(){
 
 /* ---------- 共通 ---------- */
 function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+/* 問題文・解説の中の簡単な強調タグだけを生かす。それ以外はすべて無害化する */
+function rich(s){ return esc(s).replace(/&lt;(\/?)(b|u|i|em|strong|small|br)&gt;/gi, '<$1$2>'); }
 function strip(h){ return String(h).replace(/<[^>]*>/g,''); }
 function shuffle(a){ a = a.slice(); for(var i=a.length-1;i>0;i--){ var j = Math.floor(Math.random()*(i+1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
 function fieldChip(f){ return TB[f] ? '<span class="chip f" style="background:var(--'+f+')">'+esc(TB[f].short)+'</span>' : ''; }
