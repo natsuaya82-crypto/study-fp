@@ -76,7 +76,7 @@ main{max-width:720px; margin:0 auto; padding:16px 16px 104px}
   border-top:1px solid var(--line);
   padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));
 }
-#nav .row{max-width:720px; margin:0 auto; display:grid; grid-template-columns:repeat(4,1fr); gap:4px}
+#nav .row{max-width:720px; margin:0 auto; display:grid; grid-template-columns:repeat(5,1fr); gap:3px}
 #nav button{
   background:none; border:0; border-radius:10px; padding:7px 2px 5px;
   display:flex; flex-direction:column; align-items:center; gap:3px;
@@ -232,6 +232,53 @@ main{max-width:720px; margin:0 auto; padding:16px 16px 104px}
   @keyframes fade{from{opacity:.4}to{opacity:1}}
 }
 :focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ---- ask ---- */
+.askctx{
+  display:flex; align-items:flex-start; gap:8px; background:var(--sunk);
+  border-radius:var(--r-s); padding:10px 12px; margin-bottom:12px; font-size:12.5px; line-height:1.6;
+}
+.askctx .l{font-weight:700; color:var(--ink-2); flex:none}
+.askctx .x{margin-left:auto; background:none; border:0; color:var(--ink-3); font-size:16px; padding:0 2px; flex:none}
+.msgs{display:flex; flex-direction:column; gap:12px; margin-bottom:14px}
+.msg .who{font-size:10.5px; font-weight:700; letter-spacing:.08em; color:var(--ink-3); margin-bottom:4px}
+.msg .body{font-size:14.5px; line-height:1.8; white-space:pre-wrap; word-break:break-word}
+.msg.me .body{background:var(--accent-soft); color:var(--ink); border-radius:12px; padding:10px 13px; white-space:pre-wrap}
+.msg.ai .body{border-left:3px solid var(--accent); padding-left:12px}
+.msg.ai .body b{font-weight:700}
+.msg.err .body{color:var(--bad); font-size:13px; border-left-color:var(--bad)}
+.thinking{color:var(--ink-3); font-size:13.5px; display:flex; align-items:center; gap:7px}
+.thinking i{width:7px; height:7px; border-radius:50%; background:var(--accent); animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){ .thinking i{animation:none; opacity:.7} }
+.composer{
+  position:sticky; bottom:calc(72px + env(safe-area-inset-bottom,0px));
+  background:var(--card); border:1px solid var(--line-2); border-radius:14px;
+  padding:9px 10px; box-shadow:var(--shadow);
+}
+.composer textarea{
+  width:100%; border:0; background:none; resize:none; font:inherit; font-size:15px;
+  color:var(--ink); line-height:1.6; max-height:140px; outline:none; padding:2px 2px 6px;
+}
+.composer .act{display:flex; align-items:center; gap:8px}
+.composer .act .hint{flex:1; font-size:11px; color:var(--ink-3)}
+.composer .send{
+  border:0; background:var(--accent); color:#fff; border-radius:9px;
+  padding:8px 16px; font-size:13.5px; font-weight:700; flex:none;
+}
+.composer .send:disabled{background:var(--line-2); color:var(--ink-3)}
+.sugg{display:flex; gap:7px; flex-wrap:wrap; margin-bottom:10px}
+.sugg button{
+  border:1px solid var(--line-2); background:var(--card); border-radius:99px;
+  padding:6px 12px; font-size:12.5px; color:var(--ink-2);
+}
+.askbtn{
+  background:none; border:1px solid var(--accent); color:var(--accent-ink);
+  border-radius:8px; padding:7px 12px; font-size:12.5px; font-weight:700; margin-top:10px;
+}
+.genbox{border:1px dashed var(--line-2); border-radius:var(--r-s); padding:13px; margin-top:10px}
+.genbox p{margin:0 0 9px; font-size:13px; color:var(--ink-2); line-height:1.65}
+.chip.gen{background:var(--accent-soft); color:var(--accent-ink)}
 </style>
 
 <div id="top"><div class="bar">
@@ -248,6 +295,7 @@ main{max-width:720px; margin:0 auto; padding:16px 16px 104px}
   <section class="view" id="v-drill" hidden></section>
   <section class="view" id="v-weak" hidden></section>
   <section class="view" id="v-quiz" hidden></section>
+  <section class="view" id="v-ask" hidden></section>
   <section class="view" id="v-set" hidden></section>
 </main>
 
@@ -256,6 +304,7 @@ main{max-width:720px; margin:0 auto; padding:16px 16px 104px}
   <button data-go="book"><span class="ic">▤</span>教科書</button>
   <button data-go="drill"><span class="ic">✎</span>演習</button>
   <button data-go="weak"><span class="ic">◈</span>弱点</button>
+  <button data-go="ask" id="askTab"><span class="ic">✆</span>質問</button>
 </div></nav>
 
 <script src="data/f1.js"></script>
@@ -285,8 +334,9 @@ var INTERVALS = [1,2,4,8,16];
 var LS = 'fp3-drill-v1';
 
 /* ---------- state ---------- */
-var S = { stats:{}, read:{}, sessions:[], exam:'2026-10-02' };
+var S = { stats:{}, read:{}, sessions:[], exam:'2026-10-02', gen:[] };
 var db = null, dbDoc = null, saveTimer = null, dirty = false;
+var sampleFn = null;
 
 function loadLocal(){
   try{ var raw = localStorage.getItem(LS); if(raw){ var o = JSON.parse(raw); if(o && typeof o==='object') merge(o); } }catch(e){}
@@ -301,6 +351,11 @@ function merge(o){
     all.sort(function(a,b){return b.at-a.at}); S.sessions = all.slice(0,60);
   }
   if(o.exam) S.exam = o.exam;
+  if(o.gen && o.gen.length){
+    var have = {}; S.gen.forEach(function(g){ have[g.id]=1; });
+    o.gen.forEach(function(g){ if(g && g.id && !have[g.id]){ have[g.id]=1; S.gen.push(g); } });
+    S.gen = S.gen.slice(-150);
+  }
 }
 function saveLocal(){ try{ localStorage.setItem(LS, JSON.stringify(S)); }catch(e){} }
 function scheduleSave(){
@@ -312,9 +367,15 @@ var pushing = false;
 function pushRemote(){
   if(!dbDoc || pushing || !dirty) return;
   pushing = true; dirty = false;
-  var payload = { stats:S.stats, read:S.read, sessions:S.sessions.slice(0,60), exam:S.exam, at:Date.now() };
+  var payload = { stats:S.stats, read:S.read, sessions:S.sessions.slice(0,60), exam:S.exam, gen:S.gen.slice(-150), at:Date.now() };
   dbDoc.set(payload).then(function(){ pushing=false; if(dirty) pushRemote(); })
     .catch(function(){ pushing=false; });
+}
+function initSample(){
+  if(!window.claude || !window.claude.use) return;
+  window.claude.use('sample').then(function(fn){
+    if(typeof fn === 'function'){ sampleFn = fn; render(); renderAsk(); }
+  }).catch(function(){});
 }
 function initDb(){
   if(!window.claude || !window.claude.use) return;
@@ -322,7 +383,7 @@ function initDb(){
     if(!d) return;
     db = d; dbDoc = d.doc('progress/main');
     return dbDoc.get().then(function(snap){
-      if(snap && snap.exists){ var data = snap.data()||{}; merge(data); saveLocal(); render(); }
+      if(snap && snap.exists){ var data = snap.data()||{}; merge(data); registerGen(); saveLocal(); render(); }
       if(dirty) pushRemote();
     });
   }).catch(function(){});
@@ -330,6 +391,15 @@ function initDb(){
 window.addEventListener('pagehide', function(){ saveLocal(); if(dirty) pushRemote(); });
 
 /* ---------- spaced repetition ---------- */
+function addQuestions(list){
+  list.forEach(function(q){
+    if(QMAP[q.id]) return;
+    QS.push(q); QMAP[q.id] = q;
+    if(QBY[q.f]) QBY[q.f].push(q);
+  });
+}
+function registerGen(){ addQuestions(S.gen.filter(function(g){ return g && g.id; })); }
+
 function stat(id){ return S.stats[id] || null; }
 function dueAt(id){
   var st = stat(id);
@@ -391,11 +461,12 @@ function shuffle(a){
 /* ---------- navigation ---------- */
 var cur = 'home';
 function show(id){
-  ['home','book','drill','weak','quiz','set'].forEach(function(v){
+  ['home','book','drill','weak','quiz','ask','set'].forEach(function(v){
     document.getElementById('v-'+v).hidden = (v!==id);
   });
   cur = id;
   var tab = (id==='quiz') ? quizTab : (id==='set' ? null : id);
+  if(id==='ask') tab = 'ask';
   Array.prototype.forEach.call(document.querySelectorAll('#nav button'), function(b){
     b.setAttribute('aria-current', String(b.dataset.go===tab));
   });
@@ -529,6 +600,7 @@ function renderBook(){
            (isRead ? '✓ 読了済み（取り消す）' : 'この章を読んだ') + '</button>';
       var qs = QS.filter(function(q){ return q.t===t.id; });
       if(qs.length) h += '<button class="btn" style="margin-top:8px" data-act="topicquiz:'+t.id+'">この章の問題を解く（'+qs.length+'問）</button>';
+      if(sampleFn) h += '<button class="btn" style="margin-top:8px" data-act="askt:'+t.id+'">この章について質問する</button>';
       h += '</div>';
       document.getElementById('v-book').innerHTML = h;
       return;
@@ -608,6 +680,11 @@ function renderDrill(){
     '<button class="go" data-act="mock">開始</button></div>';
   h += '<div class="todo"><span class="t"><b>ランダム20問</b><small>全分野からまんべんなく</small></span>'+
     '<button class="go" data-act="random">開始</button></div>';
+  if(sampleFn){
+    h += '<div class="todo"><span class="t"><b>あなた専用の問題を作る</b><small>'+
+      (gen.busy ? '作成中…' : '間違えた問題をもとにClaudeが新しく出題')+'</small></span>'+
+      '<button class="go" data-act="gen:8" '+(gen.busy?'disabled style="opacity:.4"':'')+'>作る</button></div>';
+  }
   h += '</div>';
 
   h += '<div class="card"><p class="eyebrow">分野別</p>';
@@ -651,6 +728,28 @@ function renderWeak(){
       '<button class="go" data-act="review">解く</button></div></div>';
   }
 
+  if(sampleFn){
+    h += '<div class="card"><p class="eyebrow">あなた専用の問題</p><div class="genbox">';
+    h += '<p>あなたが間違えた問題と分野別の正答率をClaudeに渡して、'+
+         '同じ論点を別の角度から問う新しい問題を作ります。'+
+         (weak.length ? '' : 'まず何問か解くと、狙いが絞れます。')+'</p>';
+    if(gen.busy){
+      h += '<div class="thinking"><i></i>あなたの弱点から問題を作っています…（30秒ほど）</div>';
+    } else {
+      h += '<div class="btnrow"><button class="btn primary" data-act="gen:8">8問つくる</button>'+
+           '<button class="btn" data-act="gen:15">15問つくる</button></div>';
+      if(worst) h += '<button class="btn ghost" style="margin-top:8px" data-act="genf:'+worst.f+'">'+
+        esc(TB[worst.f].short)+'だけで8問つくる</button>';
+    }
+    if(gen.err) h += '<p class="tiny" style="color:var(--bad);margin:9px 0 0">'+esc(gen.err)+'</p>';
+    if(gen.note) h += '<p class="tiny" style="color:var(--good);margin:9px 0 0">'+esc(gen.note)+'</p>';
+    h += '</div>';
+    var gn = S.gen.length;
+    if(gn) h += '<p class="tiny muted" style="margin:10px 0 0">これまでに作った問題 '+gn+
+      '問は問題バンクに加わっていて、復習テストにも出てきます。</p>';
+    h += '</div>';
+  }
+
   h += '<div class="card"><p class="eyebrow">間違えた問題（'+weak.length+'）</p>';
   if(!weak.length){
     h += '<div class="empty">まだ記録がありません。<br>演習を始めると、間違えた問題がここに集まります。</div>';
@@ -692,6 +791,292 @@ function renderSet(){
     S.exam = inp.value; scheduleSave();
     var b = document.getElementById('saveBar'); b.textContent='保存しました'; b.className='savebar on';
     renderHome();
+  });
+}
+
+/* ---------- ask Claude ---------- */
+var ask = { ctx:null, turns:[], busy:false, partial:'', err:'', ctl:null };
+
+var RULES = [
+ 'あなたはFP技能検定3級の講師です。相手は2026年10月2日に3級（学科）を受検します。',
+ '次のルールで答えてください。',
+ '・日本語。まず結論を一文で、そのあとに理由。前置きや挨拶は書かない。',
+ '・試験で問われる形に即して説明する。試験に出ないことは書かない。',
+ '・具体例や数字を使う。計算は途中式を必ず示す。',
+ '・税率・控除額・年金額など毎年改正される数値は、断定せず「受検年度のテキストで確認を」と添える。',
+ '・引っかけられやすい点があれば最後に一行で指摘する。',
+ '・分からないことは分からないと答える。',
+ '・全体で400字程度。長くしない。'
+].join('\n');
+
+function topicText(t){
+  var out = [t.title, ''];
+  (t.blocks||[]).forEach(function(b){
+    if(b.t==='p') out.push(strip(b.x));
+    else if(b.t==='ul') b.x.forEach(function(li){ out.push('・'+strip(li)); });
+    else if(b.t==='table'){
+      out.push(b.head.map(strip).join(' / '));
+      b.rows.forEach(function(r){ out.push(r.map(strip).join(' / ')); });
+    }
+    else if(b.t==='ex'){ out.push('例：'+strip(b.q)); out.push('→ '+strip(b.a)); }
+    else if(b.t==='key'){ (Array.isArray(b.x)?b.x:[b.x]).forEach(function(k){ out.push('暗記：'+strip(k)); }); }
+    else if(b.t==='warn') out.push('注意：'+strip(b.x));
+  });
+  return out.join('\n').slice(0, 3000);
+}
+function strip(h){ return String(h).replace(/<[^>]*>/g,''); }
+
+function ctxText(c){
+  if(!c) return '';
+  if(c.kind==='q'){
+    var q = QMAP[c.id]; if(!q) return '';
+    var opts = q.type==='ox' ? ['○（正しい）','×（誤り）'] : q.c;
+    return '【いま解いた問題】\n' + q.q + '\n' +
+      opts.map(function(o,i){ return (i+1)+'. '+o+(i===q.a?'  ←正解':''); }).join('\n') +
+      '\n解説：' + q.e;
+  }
+  if(c.kind==='t'){
+    var info = TMAP[c.id]; if(!info) return '';
+    return '【いま読んでいる章】\n' + topicText(info.t);
+  }
+  return '';
+}
+function ctxLabel(c){
+  if(!c) return '';
+  if(c.kind==='q'){ var q=QMAP[c.id]; return q ? 'この問題について：' + q.q.slice(0,42) + (q.q.length>42?'…':'') : ''; }
+  if(c.kind==='t'){ var i=TMAP[c.id]; return i ? 'この章について：' + i.t.title : ''; }
+  return '';
+}
+
+function openAsk(kind, id){
+  var same = ask.ctx && ask.ctx.kind===kind && ask.ctx.id===id;
+  if(!same){ ask.ctx = (kind ? {kind:kind, id:id} : null); ask.turns = []; ask.partial=''; ask.err=''; }
+  renderAsk(); show('ask');
+  setTimeout(function(){ var ta=document.getElementById('askInput'); if(ta) ta.focus(); }, 60);
+}
+
+function renderAsk(){
+  var box = document.getElementById('v-ask'); if(!box) return;
+  var h = '';
+  if(!sampleFn){
+    h += '<h2 class="disp" style="font-size:19px;margin:2px 0 8px">質問</h2>';
+    h += '<div class="card"><div class="empty">この画面ではClaudeに質問できません。<br>'+
+         'claude.ai で開き直すと使えるようになります。</div></div>';
+    box.innerHTML = h; return;
+  }
+  h += '<h2 class="disp" style="font-size:19px;margin:2px 0 2px">質問</h2>';
+  h += '<p class="tiny muted" style="margin:0 0 12px">分からないところを、そのまま聞いてください。</p>';
+
+  if(ask.ctx){
+    h += '<div class="askctx"><span class="l">文脈</span><span>'+esc(ctxLabel(ask.ctx))+'</span>'+
+         '<button class="x" data-act="askclear" aria-label="文脈を外す">×</button></div>';
+  }
+
+  h += '<div class="card">';
+  if(!ask.turns.length && !ask.busy){
+    h += '<div class="empty" style="padding:14px 6px">'+
+      (ask.ctx ? 'この内容について何でも聞けます。' : '教科書・問題・計算のやり方、なんでもどうぞ。')+'</div>';
+    h += '<div class="sugg">';
+    var sugg = ask.ctx
+      ? ['なぜその答えになるの？','覚え方のコツは？','似た論点との違いは？','もう1つ例を出して']
+      : ['6つの係数の見分け方','建蔽率と容積率の解き方','損益通算できる所得は？','相続分の出し方'];
+    sugg.forEach(function(x){ h += '<button data-sugg="'+esc(x)+'">'+esc(x)+'</button>'; });
+    h += '</div>';
+  }
+
+  h += '<div class="msgs" id="askMsgs">';
+  ask.turns.forEach(function(t){
+    if(t.role==='user') h += '<div class="msg me"><div class="who">じぶん</div><div class="body">'+esc(t.content)+'</div></div>';
+    else h += '<div class="msg ai"><div class="who">CLAUDE</div><div class="body">'+fmt(t.content)+'</div></div>';
+  });
+  if(ask.busy){
+    h += '<div class="msg ai"><div class="who">CLAUDE</div><div class="body" id="askLive">'+
+      (ask.partial ? fmt(ask.partial) : '<span class="thinking"><i></i>考えています…</span>')+'</div></div>';
+  }
+  if(ask.err) h += '<div class="msg err"><div class="body">'+esc(ask.err)+'</div></div>';
+  h += '</div>';
+
+  h += '<div class="composer"><textarea id="askInput" rows="2" placeholder="'+
+       (ask.ctx?'この内容について質問する':'質問を入力')+'"></textarea>';
+  h += '<div class="act"><span class="hint">'+(ask.busy?'回答中':'あなたのClaudeの利用枠を使います')+'</span>';
+  if(ask.busy) h += '<button class="send" data-act="askstop" style="background:var(--bad)">停止</button>';
+  else h += '<button class="send" id="askSend" data-act="asksend">送信</button>';
+  h += '</div></div>';
+  h += '</div>';
+  box.innerHTML = h;
+
+  var ta = document.getElementById('askInput');
+  if(ta){
+    ta.value = ask.draft || '';
+    ta.addEventListener('input', function(){
+      ask.draft = ta.value;
+      ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,140)+'px';
+    });
+    ta.addEventListener('keydown', function(ev){
+      if(ev.key==='Enter' && (ev.metaKey||ev.ctrlKey)){ ev.preventDefault(); sendAsk(); }
+    });
+  }
+}
+function fmt(t){
+  var x = esc(t);
+  x = x.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  x = x.replace(/^[-*・]\s+/gm, '・');
+  return x;
+}
+function sendAsk(text){
+  if(!sampleFn || ask.busy) return;
+  var ta = document.getElementById('askInput');
+  var msg = (text !== undefined ? text : (ta ? ta.value : '')).trim();
+  if(!msg) return;
+  ask.turns.push({role:'user', content:msg});
+  ask.turns = ask.turns.slice(-10);
+  ask.draft = ''; ask.err = ''; ask.partial = ''; ask.busy = true;
+  renderAsk();
+  var msgs = document.getElementById('askMsgs');
+  if(msgs) msgs.scrollIntoView({block:'end', behavior:'smooth'});
+
+  var lead = RULES;
+  var cx = ctxText(ask.ctx);
+  if(cx) lead += '\n\n' + cx;
+  var input = [{role:'user', content:lead}].concat(ask.turns.map(function(t){
+    return {role:t.role, content:t.content};
+  }));
+
+  ask.ctl = new AbortController();
+  sampleFn(input, {
+    signal: ask.ctl.signal,
+    cache: false,
+    onText: function(u){
+      ask.partial = u.text;
+      var live = document.getElementById('askLive');
+      if(live) live.innerHTML = fmt(u.text);
+    }
+  }).then(function(r){
+    ask.turns.push({role:'assistant', content:r.text});
+    ask.busy = false; ask.partial=''; ask.ctl=null;
+    renderAsk();
+  }).catch(function(e){
+    ask.busy = false; ask.ctl = null;
+    if(e && e.text){ ask.turns.push({role:'assistant', content:e.text}); }
+    ask.partial = '';
+    ask.err = askErr(e && e.code);
+    if(e && e.code==='cancelled') ask.err = '';
+    renderAsk();
+  });
+}
+function askErr(code){
+  if(code==='not_granted' || code==='sampling_disabled') return 'Claudeへの質問が許可されていません。画面の許可ダイアログで「許可」を選ぶと使えます。';
+  if(code==='rate_limited') return '短時間に聞きすぎたようです。少し時間をおいてからもう一度。';
+  if(code==='session_expired') return 'ログインし直してください。';
+  if(code==='prompt_too_large') return '内容が長すぎました。質問を短く区切ってください。';
+  if(code==='refused') return 'この内容には答えられませんでした。聞き方を変えてみてください。';
+  return '答えを取得できませんでした。もう一度試してください。';
+}
+
+/* ---------- personalised question generation ---------- */
+var gen = { busy:false, err:'', note:'' };
+function topicIdList(){
+  var out = [];
+  FIELDS.forEach(function(f){
+    if(!TB[f]) return;
+    TB[f].topics.forEach(function(t){ out.push(t.id+'='+t.title); });
+  });
+  return out.join('、');
+}
+function weakBrief(){
+  var lines = [];
+  var rates = [];
+  FIELDS.forEach(function(f){
+    if(!TB[f]) return;
+    var a = accuracy(QBY[f]);
+    if(a!==null) rates.push({f:f, a:a});
+  });
+  rates.sort(function(x,y){ return x.a-y.a; });
+  if(rates.length) lines.push('分野別の正答率：' + rates.map(function(r){ return TB[r.f].title+' '+r.a+'%'; }).join('、'));
+  var w = weakList().slice(0,12);
+  if(w.length){
+    lines.push('実際に間違えた問題：');
+    w.forEach(function(q){
+      var st = stat(q.id);
+      lines.push('・[' + TB[q.f].short + '] ' + q.q.slice(0,90) + '（' + st.w + '回誤答）');
+    });
+  }
+  var unread = [];
+  FIELDS.forEach(function(f){
+    if(!TB[f]) return;
+    TB[f].topics.forEach(function(t){ if(!S.read[t.id] && unread.length<8) unread.push(t.title); });
+  });
+  if(unread.length) lines.push('まだ読んでいない章：' + unread.join('、'));
+  return lines.join('\n').slice(0, 4000);
+}
+function validGen(arr, stamp){
+  var out = [];
+  if(!Array.isArray(arr)) return out;
+  arr.forEach(function(r, i){
+    if(!r || typeof r.q !== 'string' || !r.q.trim()) return;
+    if(typeof r.e !== 'string' || !r.e.trim()) return;
+    var f = FIELDS.indexOf(r.f) >= 0 ? r.f : null;
+    var t = (r.t && TMAP[r.t]) ? r.t : null;
+    if(!f && t) f = TMAP[t].f;
+    if(!f) return;
+    if(!t){ var tp = TB[f] && TB[f].topics[0]; if(!tp) return; t = tp.id; }
+    if(TMAP[t].f !== f) f = TMAP[t].f;
+    var type = r.type === 'mc' ? 'mc' : 'ox';
+    var a = Number(r.a);
+    var q = { id:'g'+stamp+'-'+i, f:f, t:t, type:type, q:String(r.q).trim(), e:String(r.e).trim(), gen:1 };
+    if(type==='mc'){
+      if(!Array.isArray(r.c) || r.c.length !== 3) return;
+      if(!(a>=0 && a<=2)) return;
+      q.c = r.c.map(function(x){ return String(x); });
+    } else {
+      if(!(a===0 || a===1)) return;
+    }
+    q.a = a;
+    out.push(q);
+  });
+  return out;
+}
+function generate(n, fieldOnly){
+  if(!sampleFn || gen.busy) return;
+  gen.busy = true; gen.err=''; gen.note='';
+  renderWeak(); renderDrill();
+  var brief = weakBrief();
+  var scope = fieldOnly && TB[fieldOnly] ? ('必ず「'+TB[fieldOnly].title+'」の範囲から出題してください。') :
+    '間違いが多い分野・論点を重点的に、複数分野から出題してください。';
+  var prompt = [
+   'FP技能検定3級（学科）の問題を' + n + '問作ってください。',
+   '',
+   'この受検者の学習状況：',
+   brief || '（まだ記録がありません。頻出論点から出題してください。）',
+   '',
+   scope,
+   '条件：',
+   '・実際の3級学科と同じ難易度。ひねりすぎない。',
+   '・上に挙がっている問題文をそのまま使わず、同じ論点を別の角度から問う。',
+   '・解説（e）は結論→理由の順で、80〜150字。引っかけ所があれば書く。',
+   '・毎年改正される金額を正解の決め手にしない（配偶者控除38万円など安定した数値は可）。',
+   '',
+   '返答はJSON配列だけ。ほかの文章は書かない。形式：',
+   '[{"q":"問題文","type":"ox","a":0,"e":"解説","t":"f3-04"},',
+   ' {"q":"問題文","type":"mc","c":["選択肢1","選択肢2","選択肢3"],"a":0,"e":"解説","t":"f5-05"}]',
+   'type="ox" のとき a は 0=正しい / 1=誤り、c は不要。',
+   'type="mc" のとき c はちょうど3つ、a は正解の添字(0〜2)。',
+   't' + ' は次から必ず選ぶ：' + topicIdList()
+  ].join('\n');
+
+  sampleFn.json(prompt, { cache:false, modelTier:'default' }).then(function(arr){
+    var list = validGen(arr, Date.now());
+    if(!list.length){ gen.busy=false; gen.err='問題を作れませんでした。もう一度試してください。'; renderWeak(); renderDrill(); return; }
+    S.gen = S.gen.concat(list).slice(-150);
+    addQuestions(list);
+    scheduleSave();
+    gen.busy = false; gen.note = list.length + '問できました。';
+    render();
+    startQuiz(list, 'あなた専用の' + list.length + '問', 'weak');
+  }).catch(function(e){
+    gen.busy = false;
+    gen.err = (e && e.code==='invalid_json') ? '形式が崩れました。もう一度試してください。' : askErr(e && e.code);
+    renderWeak(); renderDrill();
   });
 }
 
@@ -744,6 +1129,7 @@ function pick(i){
   h += '<div>'+esc(q.e)+'</div>';
   if(info) h += '<div class="lnk"><button data-act="topic:'+q.t+'">→ 教科書：'+esc(info.t.title)+'</button></div>';
   h += '</div>';
+  if(sampleFn) h += '<button class="askbtn" data-act="askq:'+q.id+'">この問題について質問する</button>';
   h += '<button class="btn primary sticky-act" id="nextBtn">'+
        (quiz.i+1 >= quiz.list.length ? '結果を見る' : '次の問題へ')+'</button>';
   var fb = document.getElementById('fb');
@@ -829,9 +1215,10 @@ function pickWeak(n){
 
 /* ---------- actions ---------- */
 document.addEventListener('click', function(ev){
-  var el2 = ev.target.closest ? ev.target.closest('[data-act],[data-pick]') : null;
+  var el2 = ev.target.closest ? ev.target.closest('[data-act],[data-pick],[data-sugg]') : null;
   if(!el2) return;
   if(el2.hasAttribute('data-pick')){ pick(Number(el2.dataset.pick)); return; }
+  if(el2.hasAttribute('data-sugg')){ sendAsk(el2.dataset.sugg); return; }
   var act = el2.dataset.act || '';
   var p = act.split(':'), k = p[0], v = p.slice(1).join(':');
 
@@ -861,6 +1248,14 @@ document.addEventListener('click', function(ev){
     if(rq.length) startQuiz(shuffle(rq), '間違い直し', 'drill');
     return;
   }
+  if(k==='ask'){ openAsk(null, null); return; }
+  if(k==='askq'){ openAsk('q', v); return; }
+  if(k==='askt'){ openAsk('t', v); return; }
+  if(k==='askclear'){ ask.ctx=null; renderAsk(); return; }
+  if(k==='asksend'){ sendAsk(); return; }
+  if(k==='askstop'){ if(ask.ctl) ask.ctl.abort(); return; }
+  if(k==='gen'){ generate(Number(v)||8, null); return; }
+  if(k==='genf'){ generate(8, v); return; }
   if(k==='reset'){
     if(window.confirm('学習記録をすべて消去します。元に戻せません。よろしいですか？')){
       S.stats={}; S.read={}; S.sessions=[];
@@ -871,10 +1266,12 @@ document.addEventListener('click', function(ev){
 });
 
 /* ---------- boot ---------- */
-function render(){ renderHome(); renderBook(); renderDrill(); renderWeak(); }
+function render(){ renderHome(); renderBook(); renderDrill(); renderWeak(); renderAsk(); }
 loadLocal();
+registerGen();
 render();
 show('home');
 initDb();
+initSample();
 })();
 </script>
