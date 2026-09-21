@@ -174,6 +174,32 @@ main{max-width:720px; margin:0 auto; padding:16px 16px 104px}
 .box.key li{margin:0 0 4px}
 .box.warn{background:var(--warn-soft); border-left:3px solid var(--warn)}
 .box.warn .lab{color:var(--warn)}
+figure.fig{
+  margin:0 0 14px; background:var(--sunk); border-radius:var(--r-s);
+  padding:14px 12px 11px; overflow-x:auto;
+}
+figure.fig svg{display:block; width:100%; max-width:100%; height:auto; color:var(--ink)}
+figure.fig figcaption{
+  margin-top:9px; font-size:12px; line-height:1.6; color:var(--ink-2); text-align:left;
+}
+.steps{counter-reset:st; margin:0 0 14px; display:flex; flex-direction:column; gap:9px}
+.steps .st{display:flex; gap:11px; align-items:flex-start}
+.steps .st .n{
+  flex:none; width:23px; height:23px; border-radius:50%; background:var(--accent);
+  color:#fff; font-size:12px; font-weight:700; display:grid; place-items:center; margin-top:2px;
+}
+.steps .st .c{flex:1; min-width:0}
+.steps .st .c b{display:block; font-size:14px; font-weight:700}
+.steps .st .c span{display:block; font-size:13.5px; color:var(--ink-2); line-height:1.7; margin-top:1px}
+.cmp{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:0 0 14px}
+@media (max-width:420px){ .cmp{grid-template-columns:1fr} }
+.cmp .side{border:1px solid var(--line); border-radius:var(--r-s); padding:11px 12px; background:var(--card)}
+.cmp .side h4{margin:0 0 7px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:6px}
+.cmp .side h4 .dot{width:8px; height:8px; border-radius:50%; flex:none}
+.cmp .side ul{margin:0; padding-left:1.05em}
+.cmp .side li{font-size:13px; line-height:1.65; margin:0 0 5px}
+.cmp .a h4 .dot{background:var(--accent)}
+.cmp .b h4 .dot{background:var(--f4)}
 
 /* ---- quiz ---- */
 .qhead{display:flex; align-items:center; gap:8px; margin-bottom:10px}
@@ -256,13 +282,28 @@ main{max-width:720px; margin:0 auto; padding:16px 16px 104px}
 .tools button.on{background:var(--mark-soft); border-color:var(--mark); color:var(--mark-ink)}
 .tools button.bm.on{background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink)}
 .mkhint{
-  background:var(--mark-soft); color:var(--mark-ink); border-radius:var(--r-s);
-  padding:9px 12px; font-size:12.5px; line-height:1.6; margin:0 0 12px; font-weight:500;
+  background:var(--sunk); color:var(--ink-2); border-radius:var(--r-s);
+  padding:9px 12px; font-size:12px; line-height:1.6; margin:0 0 12px;
 }
-[data-mk]{border-radius:4px; transition:background .12s}
-.hl{background:var(--mark-soft); box-shadow:0 0 0 3px var(--mark-soft)}
-body.mkmode [data-mk]{cursor:pointer; outline:1px dashed var(--line-2); outline-offset:3px}
-body.mkmode [data-mk]:active{background:var(--mark-soft)}
+mark.hl{
+  background:linear-gradient(transparent 8%, var(--mark-soft) 8%, var(--mark-soft) 92%, transparent 92%);
+  color:inherit; border-radius:2px; padding:0 1px;
+  box-shadow:inset 0 -2px 0 color-mix(in srgb, var(--mark) 55%, transparent);
+}
+.hl-line{background:var(--mark-soft); border-radius:4px; box-shadow:0 0 0 3px var(--mark-soft)}
+#selbar{
+  position:fixed; left:50%; transform:translateX(-50%);
+  bottom:calc(80px + env(safe-area-inset-bottom,0px)); z-index:40;
+  background:var(--card); border:1px solid var(--line-2); border-radius:99px;
+  box-shadow:0 4px 18px rgba(20,30,25,.18); padding:5px; display:flex; gap:4px;
+}
+#selbar button{
+  border:0; background:none; border-radius:99px; padding:8px 15px;
+  font-size:13px; font-weight:700; color:var(--ink); white-space:nowrap;
+}
+#selbar button.mkadd{background:var(--mark-soft); color:var(--mark-ink)}
+#selbar button.mkdel{color:var(--ink-2)}
+.doc ::selection{background:var(--mark-soft)}
 .bmrow{display:flex; align-items:center; gap:9px; padding:10px 0; border-top:1px solid var(--line)}
 .bmrow:first-child{border-top:0}
 .bmrow .nm{flex:1; min-width:0; text-align:left; background:none; border:0; padding:0}
@@ -343,6 +384,11 @@ body.mkmode [data-mk]:active{background:var(--mark-soft)}
   <section class="view" id="v-ask" hidden></section>
   <section class="view" id="v-set" hidden></section>
 </main>
+
+<div id="selbar" hidden onmousedown="event.preventDefault()" ontouchstart="event.preventDefault()">
+  <button class="mkadd" data-act="mkadd">線を引く</button>
+  <button class="mkdel" data-act="mkdel">消す</button>
+</div>
 
 <nav id="nav"><div class="row">
   <button data-go="home" aria-current="true"><span class="ic">⌂</span>ホーム</button>
@@ -533,9 +579,10 @@ function show(id){
     document.getElementById('v-'+v).hidden = (v!==id);
   });
   cur = id;
+  var sb = document.getElementById('selbar');
+  if(sb && id!=='book') sb.hidden = true;
   var tab = (id==='quiz') ? quizTab : (id==='set' ? null : id);
   if(id==='ask') tab = 'ask';
-  if(id!=='book' && mkMode){ mkMode=false; document.body.classList.remove('mkmode'); }
   Array.prototype.forEach.call(document.querySelectorAll('#nav button'), function(b){
     b.setAttribute('aria-current', String(b.dataset.go===tab));
   });
@@ -657,7 +704,7 @@ function nextUnread(){
 }
 
 /* ---------- textbook ---------- */
-var bookView = null, mkMode = false;
+var bookView = null;
 function renderBook(){
   var h = '';
   if(bookView && bookView.topic){
@@ -666,13 +713,12 @@ function renderBook(){
       var t = info.t, f = info.f;
       h += '<button class="btn ghost" style="width:auto;padding:7px 12px;font-size:12.5px" data-act="book:'+f+'">← '+esc(TB[f].title)+'</button>';
       var bmOn = S.bm.some(function(b){ return b.topic===t.id; });
+      var nMk = markCount(t.id);
       h += '<div class="tools" style="margin-top:12px">';
-      h += '<button class="'+(mkMode?'on':'')+'" data-act="mkmode">'+(mkMode?'✔ マーカー中':'✎ マーカー')+'</button>';
       h += '<button class="bm '+(bmOn?'on':'')+'" data-act="bm:'+t.id+'">'+(bmOn?'★ ブックマーク済み':'☆ ブックマーク')+'</button>';
-      var nMk = S.marks[t.id] ? Object.keys(S.marks[t.id]).filter(function(x){return S.marks[t.id][x]}).length : 0;
-      if(nMk) h += '<button data-act="mkclear:'+t.id+'">線を消す（'+nMk+'）</button>';
+      h += '<button id="mkCount" data-act="mkclear:'+t.id+'"'+(nMk?'':' hidden')+'>線を消す（'+nMk+'）</button>';
       h += '</div>';
-      if(mkMode) h += '<div class="mkhint">線を引きたい行をタップしてください。もう一度タップすると消えます。<br>引いた線は「教科書」の先頭にまとまります。</div>';
+      h += '<div class="mkhint">大事なところは<b>なぞって選ぶ</b>と「線を引く」が出ます（スマホは長押ししてから範囲を調整）。引いた線は「教科書」の先頭にまとまります。</div>';
       h += '<div class="card"><div class="doc">';
       h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+fieldChip(f)+tagChips(t)+'</div>';
       h += '<h3>'+esc(t.title)+'</h3>';
@@ -685,7 +731,9 @@ function renderBook(){
       if(qs.length) h += '<button class="btn" style="margin-top:8px" data-act="topicquiz:'+t.id+'">この章の問題を解く（'+qs.length+'問）</button>';
       if(sampleFn) h += '<button class="btn" style="margin-top:8px" data-act="askt:'+t.id+'">この章について質問する</button>';
       h += '</div>';
-      document.getElementById('v-book').innerHTML = h;
+      var bel = document.getElementById('v-book');
+      bel.innerHTML = h;
+      applyMarks(bel.querySelector('.doc'), t.id);
       return;
     }
   }
@@ -751,13 +799,117 @@ function tagChips(t){
     return '<span class="chip '+cls+'">'+esc(tg)+'</span>';
   }).join('');
 }
-function mk(tid, key){
-  var on = S.marks[tid] && S.marks[tid][key];
-  return ' data-mk="'+key+'"' + (on ? ' class="hl"' : '');
+function mk(tid, key){ return ' data-mk="'+key+'"'; }
+function mkc(tid, key, cls){ return ' data-mk="'+key+'" class="'+cls+'"'; }
+
+function mergeRanges(arr){
+  arr = (arr||[]).filter(function(r){ return r && r[1]>r[0]; })
+        .sort(function(a,b){ return a[0]-b[0]; });
+  var out = [];
+  arr.forEach(function(r){
+    var last = out[out.length-1];
+    if(last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);
+    else out.push([r[0], r[1]]);
+  });
+  return out;
 }
-function mkc(tid, key, cls){
-  var on = S.marks[tid] && S.marks[tid][key];
-  return ' data-mk="'+key+'" class="'+cls+(on?' hl':'')+'"';
+function subRange(arr, s0, e0){
+  var out = [];
+  (arr||[]).forEach(function(r){
+    if(r[1] <= s0 || r[0] >= e0){ out.push(r); return; }
+    if(r[0] < s0) out.push([r[0], s0]);
+    if(r[1] > e0) out.push([e0, r[1]]);
+  });
+  return out;
+}
+function ranges(tid, key){
+  var m = S.marks[tid] && S.marks[tid][key];
+  if(!m) return [];
+  if(m === 1) return [[0, (markLine(tid,key)||'').length]];
+  return Array.isArray(m) ? m : [];
+}
+function wrapRange(el, s0, e0){
+  var w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+  var nodes = [], pos = 0, n;
+  while((n = w.nextNode())){ var len = n.nodeValue.length; nodes.push({n:n, s:pos, e:pos+len}); pos += len; }
+  for(var i = nodes.length-1; i >= 0; i--){
+    var it = nodes[i];
+    if(it.e <= s0 || it.s >= e0) continue;
+    if(it.n.parentNode && it.n.parentNode.nodeName === 'MARK') continue;
+    var a = Math.max(s0, it.s) - it.s, b = Math.min(e0, it.e) - it.s;
+    if(b <= a) continue;
+    var node = it.n;
+    node.splitText(b);
+    var target = a > 0 ? node.splitText(a) : node;
+    var mrk = document.createElement('mark');
+    mrk.className = 'hl';
+    target.parentNode.replaceChild(mrk, target);
+    mrk.appendChild(target);
+  }
+}
+function applyMarks(root, tid){
+  var m = S.marks[tid]; if(!m || !root) return;
+  Array.prototype.forEach.call(root.querySelectorAll('[data-mk]'), function(el2){
+    var rs = ranges(tid, el2.dataset.mk);
+    rs.forEach(function(r){ wrapRange(el2, r[0], r[1]); });
+  });
+}
+function clearWraps(root){
+  if(!root) return;
+  Array.prototype.forEach.call(root.querySelectorAll('mark.hl'), function(m){
+    var par = m.parentNode;
+    while(m.firstChild) par.insertBefore(m.firstChild, m);
+    par.removeChild(m);
+    par.normalize();
+  });
+}
+function refreshMarks(){
+  var doc = document.querySelector('#v-book .doc');
+  if(!doc) return;
+  clearWraps(doc);
+  var tid = bookView && bookView.topic;
+  if(tid) applyMarks(doc, tid);
+  var cnt = document.getElementById('mkCount');
+  if(cnt && tid){
+    var n = markCount(tid);
+    if(n) cnt.textContent = '線を消す（'+n+'）'; else cnt.hidden = true;
+  }
+}
+function markCount(tid){
+  var m = S.marks[tid]; if(!m) return 0;
+  var n = 0;
+  Object.keys(m).forEach(function(k){ n += ranges(tid,k).length; });
+  return n;
+}
+function selInfo(){
+  var sel = window.getSelection();
+  if(!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  var r = sel.getRangeAt(0);
+  if(!r.toString().trim()) return null;
+  var host = r.commonAncestorContainer;
+  if(host.nodeType === 3) host = host.parentNode;
+  if(!host || !host.closest) return null;
+  host = host.closest('[data-mk]');
+  var bookEl = document.getElementById('v-book');
+  if(!host || !bookEl || bookEl.hidden || !bookEl.contains(host)) return null;
+  var pre = document.createRange();
+  pre.selectNodeContents(host);
+  pre.setEnd(r.startContainer, r.startOffset);
+  var s0 = pre.toString().length;
+  var e0 = s0 + r.toString().length;
+  if(e0 <= s0) return null;
+  return { key: host.dataset.mk, s: s0, e: e0 };
+}
+function updateSelBar(){
+  var bar = document.getElementById('selbar');
+  if(!bar) return;
+  var info = selInfo();
+  if(!info){ bar.hidden = true; return; }
+  var tid = bookView && bookView.topic;
+  if(!tid){ bar.hidden = true; return; }
+  var has = ranges(tid, info.key).some(function(r){ return r[0] < info.e && r[1] > info.s; });
+  bar.querySelector('.mkdel').hidden = !has;
+  bar.hidden = false;
 }
 function renderBlocks(blocks, tid){
   tid = tid || '';
@@ -778,10 +930,20 @@ function renderBlocks(blocks, tid){
       (Array.isArray(b.x)?b.x:[b.x]).map(function(x,xi){
         return '<li'+mk(tid,k+'.'+xi)+'>'+x+'</li>'; }).join('')+'</ul></div>';
     if(b.t==='warn') return '<div'+mkc(tid,k,'box warn')+'><span class="lab">注意</span><div>'+b.x+'</div></div>';
+    if(b.t==='fig') return '<figure class="fig">'+b.svg+
+      (b.cap ? '<figcaption'+mk(tid,k)+'>'+b.cap+'</figcaption>' : '')+'</figure>';
+    if(b.t==='steps') return '<div class="steps">'+b.x.map(function(st,si){
+        return '<div class="st"><span class="n">'+(si+1)+'</span><span class="c"'+mk(tid,k+'.'+si)+'>'+
+          '<b>'+st.t+'</b>'+(st.d?'<span>'+st.d+'</span>':'')+'</span></div>'; }).join('')+'</div>';
+    if(b.t==='cmp') return '<div class="cmp">'+['a','b'].map(function(side,sidx){
+        var d = b[side]; if(!d) return '';
+        return '<div class="side '+side+'"><h4><span class="dot"></span>'+d.t+'</h4><ul>'+
+          d.x.map(function(li,li3){ return '<li'+mk(tid,k+'.'+(sidx*50+li3))+'>'+li+'</li>'; }).join('')+
+          '</ul></div>'; }).join('')+'</div>';
     return '';
   }).join('');
 }
-function markText(tid, key){
+function markLine(tid, key){
   var info = TMAP[tid]; if(!info) return '';
   var m = key.split('.'), bi = Number(m[0].slice(1)), si = m.length>1 ? Number(m[1]) : null;
   var b = info.t.blocks && info.t.blocks[bi]; if(!b) return '';
@@ -791,6 +953,16 @@ function markText(tid, key){
   if(b.t==='table'){ var r = b.rows[si]; return r ? r.map(strip).join(' / ') : ''; }
   if(b.t==='ex') return strip(b.q) + ' → ' + strip(b.a);
   if(b.t==='warn') return strip(b.x);
+  if(b.t==='fig') return strip(b.cap||'');
+  if(b.t==='steps'){
+    var st = b.x[si]; if(!st) return '';
+    return strip(st.t) + (st.d ? strip(st.d) : '');
+  }
+  if(b.t==='cmp'){
+    var side = si >= 50 ? 'b' : 'a', ix = si >= 50 ? si-50 : si;
+    var d = b[side]; if(!d || !d.x) return '';
+    return strip(d.x[ix] || '');
+  }
   return '';
 }
 function allMarks(){
@@ -798,9 +970,12 @@ function allMarks(){
   Object.keys(S.marks).forEach(function(tid){
     if(!TMAP[tid]) return;
     Object.keys(S.marks[tid]).forEach(function(key){
-      if(!S.marks[tid][key]) return;
-      var tx = markText(tid, key);
-      if(tx) out.push({tid:tid, key:key, text:tx, f:TMAP[tid].f, title:TMAP[tid].t.title});
+      var line = markLine(tid, key);
+      if(!line) return;
+      ranges(tid, key).forEach(function(r){
+        var tx = line.slice(r[0], r[1]).trim();
+        if(tx) out.push({tid:tid, key:key, text:tx, f:TMAP[tid].f, title:TMAP[tid].t.title});
+      });
     });
   });
   return out;
@@ -971,6 +1146,15 @@ function topicText(t){
     else if(b.t==='ex'){ out.push('例：'+strip(b.q)); out.push('→ '+strip(b.a)); }
     else if(b.t==='key'){ (Array.isArray(b.x)?b.x:[b.x]).forEach(function(k){ out.push('暗記：'+strip(k)); }); }
     else if(b.t==='warn') out.push('注意：'+strip(b.x));
+    else if(b.t==='fig'){ if(b.cap) out.push('図：'+strip(b.cap)); }
+    else if(b.t==='steps') b.x.forEach(function(st,i2){ out.push((i2+1)+'. '+strip(st.t)+(st.d?'　'+strip(st.d):'')); });
+    else if(b.t==='cmp'){
+      ['a','b'].forEach(function(side){
+        var d=b[side]; if(!d) return;
+        out.push('【'+strip(d.t)+'】');
+        (d.x||[]).forEach(function(li){ out.push('・'+strip(li)); });
+      });
+    }
   });
   return out.join('\n').slice(0, 3000);
 }
@@ -1382,21 +1566,6 @@ function pickWeak(n){
 
 /* ---------- actions ---------- */
 document.addEventListener('click', function(ev){
-  if(mkMode && ev.target.closest){
-    var hit = ev.target.closest('[data-mk]');
-    if(hit && document.getElementById('v-book').contains(hit) && !ev.target.closest('[data-act]')){
-      var tid = bookView && bookView.topic;
-      if(tid){
-        var key = hit.dataset.mk;
-        S.marks[tid] = S.marks[tid] || {};
-        if(S.marks[tid][key]){ delete S.marks[tid][key]; hit.classList.remove('hl'); }
-        else { S.marks[tid][key] = 1; hit.classList.add('hl'); }
-        if(!Object.keys(S.marks[tid]).length) delete S.marks[tid];
-        scheduleSave();
-        return;
-      }
-    }
-  }
   var el2 = ev.target.closest ? ev.target.closest('[data-act],[data-pick],[data-sugg]') : null;
   if(!el2) return;
   if(el2.hasAttribute('data-pick')){ pick(Number(el2.dataset.pick)); return; }
@@ -1404,7 +1573,7 @@ document.addEventListener('click', function(ev){
   var act = el2.dataset.act || '';
   var p = act.split(':'), k = p[0], v = p.slice(1).join(':');
 
-  if(k==='go'){ bookView=null; mkMode=false; document.body.classList.remove('mkmode'); render(); show(v); return; }
+  if(k==='go'){ bookView=null; render(); show(v); return; }
   if(k==='book'){ bookView = v ? {field:v} : null; renderBook(); show('book'); return; }
   if(k==='topic'){ bookView = {topic:v}; renderBook(); show('book'); return; }
   if(k==='read'){
@@ -1430,15 +1599,29 @@ document.addEventListener('click', function(ev){
     if(rq.length) startQuiz(shuffle(rq), '間違い直し', 'drill');
     return;
   }
-  if(k==='mkmode'){
-    mkMode = !mkMode;
-    document.body.classList.toggle('mkmode', mkMode);
-    renderBook(); return;
+  if(k==='mkadd' || k==='mkdel'){
+    var info3 = selInfo(), tid3 = bookView && bookView.topic;
+    if(info3 && tid3){
+      S.marks[tid3] = S.marks[tid3] || {};
+      var cur = ranges(tid3, info3.key);
+      var next = (k==='mkadd')
+        ? mergeRanges(cur.concat([[info3.s, info3.e]]))
+        : subRange(cur, info3.s, info3.e);
+      if(next.length) S.marks[tid3][info3.key] = next; else delete S.marks[tid3][info3.key];
+      if(!Object.keys(S.marks[tid3]).length) delete S.marks[tid3];
+      scheduleSave();
+      var sel2 = window.getSelection(); if(sel2) sel2.removeAllRanges();
+      var bar2 = document.getElementById('selbar'); if(bar2) bar2.hidden = true;
+      refreshMarks();
+      renderHome();
+    }
+    return;
   }
   if(k==='mkclear'){
     if(window.confirm('この章の線をすべて消します。よろしいですか？')){
       delete S.marks[v]; scheduleSave(); renderBook(); renderHome();
     }
+    var b3 = document.getElementById('selbar'); if(b3) b3.hidden = true;
     return;
   }
   if(k==='bm'){
@@ -1482,6 +1665,20 @@ document.addEventListener('click', function(ev){
     return;
   }
 });
+
+/* ---------- selection ---------- */
+var selTimer = null;
+function queueSelBar(){
+  if(selTimer) clearTimeout(selTimer);
+  selTimer = setTimeout(updateSelBar, 140);
+}
+document.addEventListener('selectionchange', queueSelBar);
+document.addEventListener('mouseup', queueSelBar);
+document.addEventListener('touchend', queueSelBar);
+document.addEventListener('scroll', function(){
+  var bar = document.getElementById('selbar');
+  if(bar && !bar.hidden) queueSelBar();
+}, true);
 
 /* ---------- boot ---------- */
 function render(){ renderHome(); renderBook(); renderDrill(); renderWeak(); renderAsk(); }

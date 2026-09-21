@@ -34,6 +34,7 @@ topics:[
   '<b>格付け</b>：<u>BBB（トリプルB）以上が投資適格</u>、BB以下は投機的。格付けが低い＝信用リスク大＝価格が低く利回りは高い。',
   '<b>個人向け国債</b>：変動10年・固定5年・固定3年。最低金利<u>年0.05%</u>保証、1万円単位、発行後<u>1年経過すれば中途換金可</u>。'
  ]},
+ {t:'fig', cap:'金利と債券価格は必ず逆に動きます。価格が下がるほど、そこで買う人の利回りは上がります。残存期間が長い債券ほど値動きは大きくなります。', svg:'<svg viewBox="0 0 460 196" role="img" aria-label="市場金利が上がると債券価格は下がり利回りは上がるというシーソーの関係を示す図"><defs><marker id="ar33" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><g fill="currentColor" font-size="12.5" text-anchor="middle"><polygon points="230,124 212,158 248,158" fill="currentColor" opacity="0.5"/><line x1="72" y1="96" x2="388" y2="152" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="72" cy="96" r="30" fill="#b3341f" opacity="0.16"/><text x="72" y="92" font-weight="700" font-size="13">市場金利</text><text x="72" y="108" font-size="15" font-weight="700">up</text><circle cx="388" cy="152" r="30" fill="#0f6b4f" opacity="0.16"/><text x="388" y="148" font-weight="700" font-size="13">債券価格</text><text x="388" y="164" font-size="15" font-weight="700">down</text><line x1="72" y1="58" x2="72" y2="34" stroke="currentColor" stroke-width="1.6" marker-end="url(#ar33)"/><line x1="388" y1="186" x2="388" y2="192" stroke="currentColor" stroke-width="1.6" marker-end="url(#ar33)"/><text x="230" y="30" font-size="11.5">金利が上がると、既に持っている債券の魅力は下がる</text><text x="230" y="186" font-size="12" font-weight="700">価格が下がれば、そこから買う人の利回りは上がる</text></g></svg>'},
  {t:'ex',q:'表面利率1.5%、残存3年、購入価格101円の債券の最終利回りは？',a:'〔1.5 +（100 − 101）÷ 3〕÷ 101 × 100 ＝（1.5 − 0.3333）÷ 101 × 100 ≒ <b>1.16%</b>。'},
  {t:'ex',q:'表面利率2%、購入価格98円、2年保有して100円で売却。所有期間利回りは？',a:'〔2 +（100 − 98）÷ 2〕÷ 98 × 100 ＝ 3 ÷ 98 × 100 ≒ <b>3.06%</b>。'},
  {t:'key',x:['分母はいつも「購入価格」','金利↑ → 価格↓ → 利回り↑','BBB以上が投資適格']}
@@ -77,6 +78,7 @@ topics:[
   '<u>外貨預金は預金保険制度の対象外</u>。',
   '<b>外国為替証拠金取引（FX）</b>：差金決済。レバレッジをかけられ、損失が証拠金を上回ることもある。'
  ]},
+ {t:'fig', cap:'Sell（銀行が売る）でTTS、Buy（銀行が買う）でTTB。為替が動かなくても往復で手数料ぶんだけ目減りします。', svg:'<svg viewBox="0 0 520 196" role="img" aria-label="円を外貨に替えるときはTTS、外貨を円に戻すときはTTBが使われ、その差が為替手数料になることを示す図"><defs><marker id="ar36" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><g fill="currentColor" font-size="12.5" text-anchor="middle"><rect x="18" y="40" width="130" height="52" rx="10" fill="none" stroke="currentColor" stroke-width="1.4"/><text x="83" y="72" font-weight="700" font-size="14">円</text><rect x="372" y="40" width="130" height="52" rx="10" fill="none" stroke="currentColor" stroke-width="1.4"/><text x="437" y="72" font-weight="700" font-size="14">外貨</text><line x1="156" y1="54" x2="364" y2="54" stroke="#0f6b4f" stroke-width="1.8" marker-end="url(#ar36)"/><text x="260" y="45" fill="#0f6b4f" font-weight="700">TTS</text><text x="260" y="30" font-size="11" fill="#0f6b4f">預け入れるとき</text><line x1="364" y1="80" x2="156" y2="80" stroke="currentColor" stroke-width="1.8" marker-end="url(#ar36)"/><text x="260" y="96" font-weight="700">TTB</text><text x="260" y="111" font-size="11">円に戻すとき</text><line x1="60" y1="150" x2="460" y2="150" stroke="currentColor" stroke-width="1.2"/><line x1="110" y1="143" x2="110" y2="157" stroke="currentColor" stroke-width="1.4"/><text x="110" y="138" font-size="11.5" font-weight="700" fill="currentColor">TTB</text><text x="110" y="172" font-size="10.5" opacity="0.75">安い</text><line x1="260" y1="143" x2="260" y2="157" stroke="currentColor" stroke-width="1.4"/><text x="260" y="138" font-size="11.5" font-weight="700" fill="currentColor">TTM</text><text x="260" y="172" font-size="10.5" opacity="0.75">仲値</text><line x1="410" y1="143" x2="410" y2="157" stroke="#0f6b4f" stroke-width="1.4"/><text x="410" y="138" font-size="11.5" font-weight="700" fill="#0f6b4f">TTS</text><text x="410" y="172" font-size="10.5" opacity="0.75">高い</text><text x="260" y="190" font-size="11">この幅が為替手数料。往復すると両方ぶん取られる</text></g></svg>'},
  {t:'ex',q:'TTS＝131円、TTB＝129円。10,000ドルの外貨預金を作り、満期に利息なしで円に戻した。損益は？',a:'預入時：10,000 × 131 ＝ 1,310,000円。払戻時：10,000 × 129 ＝ 1,290,000円。為替変動がなくても<b>20,000円の手数料負担</b>。'},
  {t:'key',x:['預けるときTTS（Sell＝銀行が売る）、戻すときTTB（Buy）','外貨預金の為替差益は雑所得・総合課税']}
 ]},
@@ -90,6 +92,7 @@ topics:[
   '一般に、<u>満期までの期間が長いほど、原資産のボラティリティが高いほどプレミアムは高くなる</u>。'
  ]},
  {t:'ex',q:'A資産（期待収益率5%）を60%、B資産（同2%）を40%組み入れたポートフォリオの期待収益率は？',a:'5% × 0.6 + 2% × 0.4 ＝ 3.0 + 0.8 ＝ <b>3.8%</b>。'},
+ {t:'ex', q:'収益率5%、標準偏差4%、無リスク資産の利子率1%のポートフォリオのシャープレシオは？', a:'(5 − 1) ÷ 4 ＝ <b>1.0</b>。同じ収益率でも標準偏差が大きいほど値は小さくなる＝効率が悪い。'},
  {t:'key',x:['相関係数は −1 に近いほどよい','シャープレシオは大きいほど効率的','オプションの買い手は損失限定、売り手は無限定']}
 ]},
 {id:'f3-08', title:'金融商品の税金とNISA', tags:['超頻出'], blocks:[
