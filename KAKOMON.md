@@ -34,6 +34,23 @@ PDFは**スマホでタップして落とし、チャットに貼ってもらう
 一覧ページに載っていない回でも、直リンクなら残っていることがある
 （検索で `j3_202309_a.pdf` が見つかっている）。404なら次の回へ。
 
+## FP3級過去問予備校（kkmon）※ここも遮断されていて読めない
+
+https://fp3.kkmon.com/
+
+**論点タグで過去問を横断検索できる**のが強い。教材の穴を洗い出すのに、
+テキストの写真より効率がいい。ほしいのは問題文ではなく**タグの一覧**。
+
+| ページ | URL |
+|--------|-----|
+| 分野別（論点の一覧） | `https://fp3.kkmon.com/search/category.php` |
+| 年度別 | `https://fp3.kkmon.com/search/year.php` |
+| 学科・年度指定 | `https://fp3.kkmon.com/past/g-list.php?yearno=2505g` |
+| 実技・年度指定 | `https://fp3.kkmon.com/past/j-list.php?yearno=2309j` |
+| タグ指定 | `https://fp3.kkmon.com/past/list.php?tag=不動産&tag2=` |
+
+`yearno` は **YYMM + g（学科）/ j（実技）**。例：2505g、2309j、2305j。
+
 ## 無料の過去問サイト（登録不要）
 
 - FP3級ドットコム（過去問道場） https://fp3-siken.com/kakomon.html

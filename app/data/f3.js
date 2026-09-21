@@ -84,7 +84,9 @@ topics:[
 ]},
 {id:'f3-04', title:'株式と投資指標', tags:['超頻出','計算'], blocks:[
  {t:'ul',x:[
+  '<b>売買単位</b>：上場株式は<b>単元株</b>制度で、現在はすべて<u>1単元＝100株</u>に統一されています。100株未満で買いたいときは証券会社の単元未満株（ミニ株）サービスを使います。',
   '<b>受渡し</b>：売買成立日を含めて<u>3営業日目</u>（約定日＋2営業日）。',
+  '<b>配当や株主優待をもらうには</b>：<u>権利確定日</u>に株主名簿に載っている必要がある。受渡しに2営業日かかるので、<b>権利確定日の2営業日前（権利付き最終日）までに買う</b>。翌営業日（権利落ち日）に買っても間に合いません。',
   '<b>指値注文と成行注文</b>：<u>成行注文が指値注文に優先</u>（成行優先）。同じ指値なら早い注文が優先（時間優先）。',
   '<b>日経平均株価</b>：東証プライムの225銘柄の修正平均。<u>値がさ株の影響を受けやすい</u>。',
   '<b>TOPIX</b>：時価総額加重型。<u>時価総額の大きい銘柄の影響を受けやすい</u>。',
@@ -96,7 +98,8 @@ topics:[
  ]},
  {t:'fig', cap:'PERは利益から見た割高割安、PBRは純資産から見た割高割安。ROEは株価と関係なく、会社が自己資本をどれだけ効率よく使ったかを示します。', svg:'<svg viewBox="0 0 520 234" role="img" aria-label="株価を1株当たり純利益で割るとPER、1株当たり純資産で割るとPBRになる関係を示す図"><g fill="currentColor" font-size="11.5"><defs><marker id="a304" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><rect x="196" y="24" width="128" height="40" rx="8" fill="none" stroke="currentColor" stroke-width="1.6" class="fc-s"/><text x="260" y="49" font-size="14" text-anchor="middle" class="fc-f" font-weight="700">株価</text><rect x="30" y="140" width="150" height="40" rx="8" fill="none" stroke="currentColor" stroke-width="1.3"/><text x="105" y="159" font-size="10.5" text-anchor="middle">1株当たり純利益</text><text x="105" y="174" font-size="10.5" text-anchor="middle" class="dim">EPS</text><rect x="340" y="140" width="150" height="40" rx="8" fill="none" stroke="currentColor" stroke-width="1.3"/><text x="415" y="159" font-size="10.5" text-anchor="middle">1株当たり純資産</text><text x="415" y="174" font-size="10.5" text-anchor="middle" class="dim">BPS</text><line x1="230" y1="70" x2="120" y2="134" stroke="currentColor" stroke-width="1.4" marker-end="url(#a304)"/><text x="150" y="104" font-size="12" text-anchor="middle" class="fc-f" font-weight="700">÷ で PER</text><line x1="290" y1="70" x2="400" y2="134" stroke="currentColor" stroke-width="1.4" marker-end="url(#a304)"/><text x="374" y="104" font-size="12" text-anchor="middle" class="fc-f" font-weight="700">÷ で PBR</text><line x1="190" y1="160" x2="330" y2="160" stroke="currentColor" stroke-width="1.4" class="ac-s" marker-end="url(#a304)"/><text x="260" y="152" font-size="11.5" text-anchor="middle" class="ac-f" font-weight="700">純利益 ÷ 自己資本 = ROE</text><text x="260" y="204" font-size="11.5" text-anchor="middle" font-weight="700">PERもPBRも「株価 ÷ 1株当たり◯◯」。低いほど割安</text><text x="260" y="222" font-size="11" text-anchor="middle">ROEの分母は自己資本。総資産ではない</text></g></svg>'},
  {t:'ex',q:'株価1,500円、当期純利益30億円、発行済株式数2,000万株、純資産300億円、年間配当30円。PER・PBR・配当利回りは？',a:'EPS＝30億÷2,000万＝150円 → PER＝1,500÷150＝<b>10倍</b>。BPS＝300億÷2,000万＝1,500円 → PBR＝1,500÷1,500＝<b>1.0倍</b>。配当利回り＝30÷1,500×100＝<b>2%</b>。'},
- {t:'key',x:['PERもPBRも「株価 ÷ 1株当たり◯◯」','ROEの分母は自己資本（総資産ではない）','成行優先・時間優先・価格優先']}
+ {t:'ex',q:'権利確定日が3月31日（月）のとき、配当を受け取るにはいつまでに買えばよいですか。',a:'<b>3月27日（木）まで</b>。受渡しは約定日＋2営業日なので、31日（月）に株主名簿へ載るには2営業日前の約定が必要です（28日が金、そのあと土日）。この<u>27日が権利付き最終日</u>、翌28日（金）が<u>権利落ち日</u>。28日に買っても今回の配当はもらえません。'},
+ {t:'key',x:['1単元＝<b>100株</b>（上場株式は統一済み）','受渡しは約定日＋2営業日＝3営業日目','配当は<b>権利確定日の2営業日前</b>までに買う','PERもPBRも「株価 ÷ 1株当たり◯◯」','ROEの分母は自己資本（総資産ではない）','成行優先・時間優先・価格優先']}
 ]},
 {id:'f3-05', title:'投資信託', tags:['頻出'], blocks:[
  {t:'ul',x:[
