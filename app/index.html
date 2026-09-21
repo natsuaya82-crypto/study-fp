@@ -275,6 +275,7 @@ figure.fig figcaption{
 .rank .nm small{display:block; font-size:11px; color:var(--ink-3); margin-top:2px;
   font-family:"IBM Plex Mono",ui-monospace,monospace}
 .rank .nm .bar{display:block; margin-top:7px; height:6px}
+.rank .nm .thin{background:var(--sunk); color:var(--ink-3); border-radius:99px; padding:1px 6px; font-size:10px}
 .pacebar{display:flex; gap:1px; background:var(--line); border-radius:var(--r-s); overflow:hidden; margin-top:12px}
 .pacebar div{flex:1; background:var(--card); padding:9px 4px; text-align:center}
 .pacebar b{display:block; font-size:16px; font-weight:600; font-family:"IBM Plex Mono",ui-monospace,monospace}
@@ -725,9 +726,13 @@ function dueAt(id){
 function isDue(id){ return dueAt(id) <= Date.now(); }
 function answered(id){ return !!stat(id); }
 function accuracy(list){
+  var t = tally(list);
+  return t.n ? Math.round(t.c/t.n*100) : null;
+}
+function tally(list){
   var n=0, c=0;
   list.forEach(function(q){ var st=stat(q.id); if(st){ n+=st.n||0; c+=(st.n||0)-(st.w||0); } });
-  return n ? Math.round(c/n*100) : null;
+  return {n:n, c:c};
 }
 function record(id, correct, ms){
   var st = S.stats[id] || {n:0,w:0,st:0,t:0};
@@ -785,14 +790,21 @@ function starBtn(id){
   return '<button class="star'+(on?' on':'')+'" data-act="qbm:'+id+'" aria-pressed="'+on+'" '+
     'aria-label="'+(on?'ブックマークを外す':'あとで見直す')+'">'+(on?'★':'☆')+'</button>';
 }
-/* B が「本番ペースで全問正解」＝100。そこから上は本番より速いということ */
-function gradeOf(score){
+/* B が「本番ペースで全問正解」＝100。そこから上は本番より速いということ。
+   ただし速さは青天井なので、正答率が低いまま上のランクに行かないよう、
+   ランクの上限を正答率で抑える。本番は6割で合格なので、そこを境にしている */
+var ACC_CAP = [[85,4],[75,3],[60,2],[50,1]]; /* 正答率 → 許すランクの上限（4=S） */
+function gradeOf(score, acc){
   if(score === null) return {g:'—', c:'var(--ink-3)'};
-  if(score >= 250) return {g:'S', c:'var(--good)'};
-  if(score >= 170) return {g:'A', c:'var(--accent)'};
-  if(score >= 100) return {g:'B', c:'var(--f1)'};
-  if(score >= 60) return {g:'C', c:'var(--warn)'};
-  return {g:'D', c:'var(--bad)'};
+  var lv = score >= 250 ? 4 : score >= 170 ? 3 : score >= 100 ? 2 : score >= 60 ? 1 : 0;
+  if(acc !== null && acc !== undefined){
+    var cap = 0;
+    for(var i=0;i<ACC_CAP.length;i++){ if(acc >= ACC_CAP[i][0]){ cap = ACC_CAP[i][1]; break; } }
+    if(lv > cap) lv = cap;
+  }
+  var G = [{g:'D',c:'var(--bad)'},{g:'C',c:'var(--warn)'},{g:'B',c:'var(--f1)'},
+           {g:'A',c:'var(--accent)'},{g:'S',c:'var(--good)'}];
+  return G[lv];
 }
 function weakList(){
   return pool().filter(function(q){ var st=stat(q.id); return st && st.w>0; })
@@ -1357,14 +1369,17 @@ function renderChart(){
   g += '<text x="'+(W-R+3)+'" y="'+(Y(60)+3)+'" text-anchor="start">合格</text>';
 
   // 全体は累積平均を主役の線に、各回の素点は薄い点で添える
-  var avgSeries = [];
-  var run = 0;
-  pct.forEach(function(v,i){ run += v; avgSeries.push(run/(i+1)); });
+  /* 平均は問題数で重みをつける。5問のドリルと60問の模試を
+     同じ1票として足すと、少ない回の当たり外れで平均が振り回されるため */
+  var avgSeries = [], rc = 0, rt = 0;
+  data.forEach(function(d){ rc += d.correct; rt += d.total; avgSeries.push(rc/rt*100); });
   var main = chartField ? pct : avgSeries;
 
   if(!chartField){
     pct.forEach(function(v,i){
-      g += '<circle class="raw" cx="'+X(i)+'" cy="'+Y(v)+'" r="3"/>';
+      /* 点の大きさ＝その回の問題数。小さい点は軽い回という意味 */
+      var r = Math.max(2.2, Math.min(6, 2 + Math.sqrt(data[i].total)/2));
+      g += '<circle class="raw" cx="'+X(i)+'" cy="'+Y(v)+'" r="'+r.toFixed(1)+'"/>';
     });
   }
   if(n > 1){
@@ -1390,8 +1405,9 @@ function renderChart(){
       '<span><i class="k-raw"></i>各回の点数</span></div>';
   }
 
-  var sum = pct.reduce(function(a,b){return a+b;},0);
-  var avg = Math.round(sum/n), best = Math.max.apply(null,pct);
+  var totC = 0, totT = 0;
+  data.forEach(function(d){ totC += d.correct; totT += d.total; });
+  var avg = Math.round(totC/totT*100), best = Math.max.apply(null,pct);
   var delta = n>1 ? Math.round(main[n-1]) - Math.round(main[n-2]) : null;
   h += '<div class="statrow">';
   h += '<div><b class="num">'+avg+'%</b><small>全体の平均</small></div>';
@@ -1400,8 +1416,11 @@ function renderChart(){
   h += '<div><b class="num">'+(delta===null?'—':(delta>0?'+':'')+delta)+'</b><small>平均の増減</small></div>';
   h += '</div>';
   h += '<p class="tiny muted" style="margin:9px 0 0">'+
-    (chartField ? '各回の点数をそのまま並べています。' : '太い線はそこまでの平均、薄い点は各回の点数です。')+
-    '点をタップすると日付と内訳が出ます。破線は合格ライン（6割）。</p>';
+    (chartField ? '各回の点数をそのまま並べています。'
+      : '太い線は<b>通算の正答率</b>（'+totC+'/'+totT+'問）。'+
+        '<u>問題数で重みをつけている</u>ので、5問の回と60問の回が同じ扱いにはなりません。'+
+        '薄い点は各回の点数で、<b>点の大きさがその回の問題数</b>です。')+
+    '点をタップすると内訳が出ます。破線は合格ライン（6割）。</p>';
   return h;
 }
 
@@ -1562,6 +1581,8 @@ function confirmDlg(){
 
 /* ---------- 単元ランキング ---------- */
 var rankBy = 'score', rankUnit = 'topic';
+/* これだけ解いて初めて順位に入れる。少ない回数だと数字が当てにならないため */
+var RANK_MIN = 10;
 function rankRows(){
   var rows = [];
   if(rankUnit === 'field'){
@@ -1579,15 +1600,17 @@ function rankRows(){
     });
   }
   rows.forEach(function(r){
-    r.acc = accuracy(r.qs);
+    var t = tally(r.qs);
+    r.n = t.n;                      /* 解答した回数。これが土台の大きさ */
+    r.acc = t.n ? Math.round(t.c/t.n*100) : null;
     var p = paceOf(r.qs);
     r.sec = p ? p.sec : null;
-    r.timed = p ? p.n : 0;
     r.done = r.qs.filter(function(q){ return answered(q.id); }).length;
     r.speed = speedScore(r.sec, examScope);
     r.score = totalScore(r.acc, r.speed);
+    r.ranked = t.n >= RANK_MIN;     /* 足りないものは順位をつけない */
   });
-  return rows.filter(function(r){ return r.done >= 3; });
+  return rows.filter(function(r){ return r.n > 0; });
 }
 function renderRank(){
   var box = document.getElementById('v-rank');
@@ -1606,13 +1629,15 @@ function renderRank(){
     '<button data-act="rb:weak" aria-pressed="'+(rankBy==='weak')+'">弱い順</button>'+
     '<button data-act="rb:acc" aria-pressed="'+(rankBy==='acc')+'">正答率</button>'+
     '<button data-act="rb:sec" aria-pressed="'+(rankBy==='sec')+'">速さ</button></div>';
-  if(!rows.length){
-    h += '<div class="empty">3問以上解いた'+(rankUnit==='topic'?'単元':'分野')+
-      'から並びます。<br>まずは解いてみてください。</div></div>';
-    box.innerHTML = h + askEntry();
+  var ranked = rows.filter(function(r){ return r.ranked; });
+  var thin = rows.filter(function(r){ return !r.ranked; });
+  if(!ranked.length){
+    h += '<div class="empty">'+RANK_MIN+'回以上解いた'+(rankUnit==='topic'?'単元':'分野')+
+      'から順位をつけます。<br>同じ土台で比べるためなので、もう少し解いてみてください。</div></div>';
+    box.innerHTML = h + thinCard(thin) + askEntry();
     return;
   }
-  rows.sort(function(a,b){
+  ranked.sort(function(a,b){
     if(rankBy === 'acc') return (b.acc||0)-(a.acc||0);
     if(rankBy === 'sec'){
       if(a.sec === null) return 1; if(b.sec === null) return -1;
@@ -1621,24 +1646,27 @@ function renderRank(){
     if(rankBy === 'weak') return (a.score===null?999:a.score)-(b.score===null?999:b.score);
     return (b.score||0)-(a.score||0);
   });
-  var top = Math.max.apply(null, rows.map(function(r){ return r.score || 0; })) || 1;
-  rows.forEach(function(r, i){
-    var gr = gradeOf(r.score);
+  var top = Math.max.apply(null, ranked.map(function(r){ return r.score || 0; })) || 1;
+  ranked.forEach(function(r, i){
+    var gr = gradeOf(r.score, r.acc);
     var w = r.score === null ? 0 : Math.max(3, Math.round(r.score/top*100));
     h += '<div class="rank"><span class="pos">'+(i+1)+'</span>'+
       '<span class="lead" style="background:'+r.color+'"></span>'+
       '<span class="nm"><span class="top"><b>'+esc(r.name)+'</b>'+
       '<span class="gr" style="background:'+(r.score===null?'var(--line-2)':gr.c)+'">'+gr.g+'</span>'+
       '<span class="sc" style="color:'+r.color+'">'+(r.score===null?'—':r.score)+'</span></span>'+
-      '<small>'+(r.sub?esc(r.sub)+'　':'')+r.done+'/'+r.qs.length+'問　'+
+      '<small>'+(r.sub?esc(r.sub)+'　':'')+'解答'+r.n+'回　'+
       (r.acc===null?'—':r.acc+'%')+'　'+fmtSec(r.sec)+'/問</small>'+
       '<span class="bar"><i style="width:'+w+'%;background:'+r.color+'"></i></span>'+
       '</span></div>';
   });
-  h += '<p class="tiny muted" style="margin:12px 0 0">スコア＝正答率×速さ。'+
-    'S 250／A 170／B 100／C 60</p>';
+  h += '<p class="tiny muted" style="margin:12px 0 0">'+RANK_MIN+'回以上解いた'+
+    (rankUnit==='topic'?'単元':'分野')+'だけを並べています。スコア＝正答率×速さ。'+
+    'S 250／A 170／B 100／C 60。<u>速く解いてもランクは正答率で頭打ち</u>'+
+    '（S 85%・A 75%・B 60%・C 50%以上）。</p>';
   h += '</div>';
-  var lows = rows.slice().sort(function(a,b){
+  h += thinCard(thin);
+  var lows = ranked.slice().sort(function(a,b){
     return (a.score===null?999:a.score)-(b.score===null?999:b.score); }).slice(0,3);
   if(lows.length){
     h += '<div class="card"><p class="eyebrow">下位から出題する</p>';
@@ -1650,6 +1678,28 @@ function renderRank(){
     h += '</div>';
   }
   box.innerHTML = h + askEntry();
+}
+/* まだ順位をつけられない単元。数字は出すが、順位もランクも付けない */
+function thinCard(thin){
+  if(!thin.length) return '';
+  thin.sort(function(a,b){ return b.n - a.n; });
+  var h = '<div class="card"><p class="eyebrow">まだ判定できない'+
+    (rankUnit==='topic'?'単元':'分野')+'（'+thin.length+'）</p>'+
+    '<p class="tiny muted" style="margin:0 0 10px">解答が'+RANK_MIN+
+    '回に満たないので、上の順位には入れていません。数が少ないと、'+
+    'たまたま当たった・外したで数字が大きく動くためです。</p>';
+  thin.slice(0,12).forEach(function(r){
+    h += '<div class="rank"><span class="pos"></span>'+
+      '<span class="lead" style="background:'+r.color+';opacity:.45"></span>'+
+      '<span class="nm"><span class="top"><b>'+esc(r.name)+'</b>'+
+      '<span class="gr" style="background:var(--line-2);color:var(--ink-2)">あと'+(RANK_MIN-r.n)+'</span></span>'+
+      '<small>'+(r.sub?esc(r.sub)+'　':'')+'解答'+r.n+'回　'+
+      (r.acc===null?'—':r.acc+'%')+'　'+fmtSec(r.sec)+'/問</small></span>'+
+      '<button class="go" style="align-self:center" data-act="'+
+      (rankUnit==='field'?'field:':'topicquiz:')+r.key+'">解く</button></div>';
+  });
+  if(thin.length>12) h += '<p class="tiny muted" style="margin:10px 0 0">ほか'+(thin.length-12)+'件</p>';
+  return h + '</div>';
 }
 function askEntry(){
   if(!sampleFn) return '';
@@ -2139,7 +2189,7 @@ function renderResult(){
     var tgt = EXAMS[quiz.ex || examScope].sec;
     var sp = speedScore(avg, quiz.ex);
     var total = totalScore(pct, sp);
-    var gr = gradeOf(total);
+    var gr = gradeOf(total, pct);
     h += '<div class="card"><p class="eyebrow">ペース</p><div class="pacebar">'+
       '<div><b>'+fmtSec(avg)+'</b><small>1問あたり</small></div>'+
       '<div><b>'+sp+'</b><small>速度点</small></div>'+
@@ -2152,6 +2202,7 @@ function renderResult(){
        '本番だと時間が足りません。迷ったら飛ばす練習を。')+
       '<br>速度点は本番ペースで100、<b>速いほど上限なく伸びます</b>。'+
       '総合＝正答率×速度点÷100なので、<b>本番ペースで全問正解がちょうど100（B）</b>。'+
+      'ただし<u>ランクは正答率で頭打ち</u>（S 85%・A 75%・B 60%・C 50%以上）。'+
       (quiz.untimed ? '<br><b>'+quiz.untimed+'問</b>は長く中断したため計測外です（正誤は記録済み）。' : '')+
       '</p></div>';
   } else if(quiz.untimed){
