@@ -247,6 +247,30 @@ figure.fig figcaption{
 .qhead{display:flex; align-items:center; gap:8px; margin-bottom:10px}
 .qhead .prog{flex:1}
 .qhead .cnt{font-size:12px; color:var(--ink-2); flex:none}
+.clock{flex:none; font-size:12px; font-weight:700; color:var(--ink-3);
+  background:var(--sunk); border-radius:99px; padding:3px 9px; min-width:48px; text-align:center}
+.clock.warn{background:var(--warn-soft); color:var(--warn)}
+.clock.over{background:var(--bad-soft); color:var(--bad)}
+.qtime{margin-left:auto; font-size:11.5px; font-weight:700; color:var(--ink-3);
+  background:var(--card); border-radius:99px; padding:2px 9px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace}
+.qtime.slow{color:var(--bad)}
+.rank{display:flex; align-items:center; gap:9px; padding:9px 0; border-top:1px solid var(--line)}
+.rank:first-of-type{border-top:0}
+.rank .pos{flex:none; width:20px; font-size:12px; font-weight:700; color:var(--ink-3); text-align:right;
+  font-family:"IBM Plex Mono",ui-monospace,monospace}
+.rank .gr{flex:none; width:24px; height:24px; border-radius:7px; display:grid; place-items:center;
+  font-size:12px; font-weight:700; color:#fff}
+.rank .nm{flex:1; min-width:0}
+.rank .nm b{display:block; font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.rank .nm small{display:block; font-size:11px; color:var(--ink-3); margin-top:1px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace}
+.rank .sc{flex:none; width:38px; text-align:right; font-size:15px; font-weight:700;
+  font-family:"IBM Plex Mono",ui-monospace,monospace}
+.pacebar{display:flex; gap:1px; background:var(--line); border-radius:var(--r-s); overflow:hidden; margin-top:12px}
+.pacebar div{flex:1; background:var(--card); padding:9px 4px; text-align:center}
+.pacebar b{display:block; font-size:16px; font-weight:600; font-family:"IBM Plex Mono",ui-monospace,monospace}
+.pacebar small{display:block; font-size:10px; color:var(--ink-3); margin-top:1px}
 .qctx{
   background:var(--sunk); border-left:3px solid var(--ink-3); border-radius:var(--r-s);
   padding:12px 14px; margin:8px 0 14px; font-size:13.5px; line-height:1.75;
@@ -532,7 +556,9 @@ mark.hl{
 var TB = window.FP_TEXTBOOK || {};
 var QS = window.FP_QUESTIONS || [];
 var FIELDS = ['f1','f2','f3','f4','f5','f6'];
-var EXAMS = { g:{key:'g', name:'学科', mock:60, per:10}, j:{key:'j', name:'実技', mock:20, per:4} };
+/* sec は本番のペース。学科は60問60分＝1問60秒、実技は20問60分＝1問180秒 */
+var EXAMS = { g:{key:'g', name:'学科', mock:60, per:10, sec:60}, j:{key:'j', name:'実技', mock:20, per:4, sec:180} };
+var MAXMS = 180000; /* これを超えたら「手を止めていた」とみなして時間は記録しない */
 var examScope = 'g';
 function exOf(q){ return q.ex === 'j' ? 'j' : 'g'; }
 var QBY = {};   // QBY[scope][field]
@@ -661,13 +687,44 @@ function accuracy(list){
   list.forEach(function(q){ var st=stat(q.id); if(st){ n+=st.n||0; c+=(st.n||0)-(st.w||0); } });
   return n ? Math.round(c/n*100) : null;
 }
-function record(id, correct){
+function record(id, correct, ms){
   var st = S.stats[id] || {n:0,w:0,st:0,t:0};
   st.n = (st.n||0)+1;
   if(correct){ st.st = (st.st||0)+1; } else { st.w = (st.w||0)+1; st.st = 0; }
   st.t = Date.now();
+  if(ms > 0 && ms <= MAXMS){
+    /* 解答にかかった時間の移動平均。mn は時間を測れた回数 */
+    var mn = (st.mn||0) + 1;
+    st.ms = st.ms ? Math.round((st.ms*(mn-1) + ms)/mn) : ms;
+    st.mn = mn;
+  }
   S.stats[id] = st;
   scheduleSave();
+}
+/* 1問あたりの平均秒。測れていなければ null */
+function avgSec(q){ var st = stat(q.id); return (st && st.ms) ? st.ms/1000 : null; }
+function paceOf(list){
+  var tot = 0, n = 0;
+  list.forEach(function(q){ var v = avgSec(q); if(v !== null){ tot += v; n++; } });
+  return n ? {sec: tot/n, n: n} : null;
+}
+function fmtSec(v){
+  if(v === null || v === undefined) return '—';
+  return v >= 60 ? Math.floor(v/60)+'分'+String(Math.round(v%60)).padStart(2,'0')+'秒' : (Math.round(v*10)/10)+'秒';
+}
+/* 速度点：本番ペースちょうどで100点。速ければ頭打ちの100、遅いほど下がる */
+function speedScore(sec, ex){
+  if(sec === null || !sec) return null;
+  var target = EXAMS[ex || examScope].sec;
+  return Math.max(0, Math.min(100, Math.round(target/sec*100)));
+}
+function gradeOf(score){
+  if(score === null) return {g:'—', c:'var(--ink-3)'};
+  if(score >= 90) return {g:'S', c:'var(--good)'};
+  if(score >= 80) return {g:'A', c:'var(--accent)'};
+  if(score >= 70) return {g:'B', c:'var(--f1)'};
+  if(score >= 60) return {g:'C', c:'var(--warn)'};
+  return {g:'D', c:'var(--bad)'};
 }
 function weakList(){
   return pool().filter(function(q){ var st=stat(q.id); return st && st.w>0; })
@@ -718,6 +775,7 @@ function show(id){
   cur = id;
   var sb = document.getElementById('selbar');
   if(sb && id!=='book') sb.hidden = true;
+  if(id !== 'quiz') stopClock();
   var tab = (id==='quiz') ? quizTab : (id==='set' ? null : id);
   if(id==='ask') tab = 'ask';
   Array.prototype.forEach.call(document.querySelectorAll('#nav button'), function(b){
@@ -1312,6 +1370,8 @@ function renderWeak(){
   if(worst) h += '<p class="tiny muted" style="margin:8px 0 0">いま一番弱いのは<b>'+esc(TB[worst.f].title)+'</b>（'+worst.a+'%）。</p>';
   h += '</div>';
 
+  h += renderRank();
+
   if(due.length){
     h += '<div class="card"><div class="todo"><span class="t"><b>復習のタイミング</b><small>'+due.length+'問</small></span>'+
       '<button class="go" data-act="review">解く</button></div></div>';
@@ -1359,6 +1419,83 @@ function renderWeak(){
   }
   h += '</div>';
   document.getElementById('v-weak').innerHTML = h;
+}
+
+/* ---------- 単元ランキング ---------- */
+var rankBy = 'score', rankUnit = 'topic';
+function rankRows(){
+  var rows = [];
+  if(rankUnit === 'field'){
+    FIELDS.forEach(function(f){
+      if(!TB[f]) return;
+      rows.push({key:f, name:TB[f].title, color:'var(--'+f+')', qs:poolBy(f)});
+    });
+  } else {
+    FIELDS.forEach(function(f){
+      if(!TB[f]) return;
+      TB[f].topics.forEach(function(t){
+        var qs = poolBy(f).filter(function(q){ return q.t === t.id; });
+        if(qs.length) rows.push({key:t.id, name:t.title, sub:TB[f].short, color:'var(--'+f+')', qs:qs});
+      });
+    });
+  }
+  rows.forEach(function(r){
+    r.acc = accuracy(r.qs);
+    var p = paceOf(r.qs);
+    r.sec = p ? p.sec : null;
+    r.timed = p ? p.n : 0;
+    r.done = r.qs.filter(function(q){ return answered(q.id); }).length;
+    r.speed = speedScore(r.sec, examScope);
+    r.score = (r.acc === null) ? null
+      : (r.speed === null ? r.acc : Math.round(r.acc*0.7 + r.speed*0.3));
+  });
+  return rows.filter(function(r){ return r.done >= 3; });
+}
+function renderRank(){
+  var rows = rankRows();
+  var h = '<div class="card"><p class="eyebrow">'+esc(scopeName())+'ランキング</p>';
+  h += '<div class="fchips" style="--cc:var(--accent)">'+
+    '<button data-act="ru:topic" aria-pressed="'+(rankUnit==='topic')+'">単元別</button>'+
+    '<button data-act="ru:field" aria-pressed="'+(rankUnit==='field')+'">分野別</button>'+
+    '<span style="flex:none;width:8px"></span>'+
+    '<button data-act="rb:score" aria-pressed="'+(rankBy==='score')+'">総合</button>'+
+    '<button data-act="rb:acc" aria-pressed="'+(rankBy==='acc')+'">正答率</button>'+
+    '<button data-act="rb:sec" aria-pressed="'+(rankBy==='sec')+'">速さ</button>'+
+    '<button data-act="rb:weak" aria-pressed="'+(rankBy==='weak')+'">弱い順</button></div>';
+  if(!rows.length){
+    h += '<div class="empty">3問以上解いた'+(rankUnit==='topic'?'単元':'分野')+
+      'から並びます。<br>まずは解いてみてください。</div></div>';
+    return h;
+  }
+  rows.sort(function(a,b){
+    if(rankBy === 'acc') return (b.acc||0)-(a.acc||0);
+    if(rankBy === 'sec'){
+      if(a.sec === null) return 1; if(b.sec === null) return -1;
+      return a.sec-b.sec;
+    }
+    if(rankBy === 'weak') return (a.score===null?999:a.score)-(b.score===null?999:b.score);
+    return (b.score||0)-(a.score||0);
+  });
+  rows.forEach(function(r, i){
+    var gr = gradeOf(r.score);
+    h += '<div class="rank"><span class="pos">'+(i+1)+'</span>'+
+      '<span class="gr" style="background:'+(r.score===null?'var(--line-2)':gr.c)+'">'+gr.g+'</span>'+
+      '<span class="nm"><b>'+esc(r.name)+'</b><small>'+
+      (r.sub?esc(r.sub)+'　':'')+r.done+'/'+r.qs.length+'問　'+
+      (r.acc===null?'—':r.acc+'%')+'　'+fmtSec(r.sec)+'/問</small></span>'+
+      '<span class="sc" style="color:'+gr.c+'">'+(r.score===null?'—':r.score)+'</span></div>';
+  });
+  var last = rows[rows.length-1];
+  if(rankBy !== 'sec' && last && last.score !== null){
+    h += '<p class="tiny muted" style="margin:10px 0 0">いちばん下は<b>'+esc(last.name)+'</b>（'+
+      last.acc+'%・'+fmtSec(last.sec)+'/問）。ここから潰すと伸びます。</p>';
+  }
+  var slow = rows.filter(function(r){ return r.sec !== null; })
+    .sort(function(a,b){ return b.sec-a.sec; })[0];
+  if(slow) h += '<p class="tiny muted" style="margin:6px 0 0">いちばん時間を食っているのは<b>'+
+    esc(slow.name)+'</b>（'+fmtSec(slow.sec)+'/問）。本番の目安は1問'+EXAMS[examScope].sec+'秒。</p>';
+  h += '</div>';
+  return h;
 }
 
 /* ---------- settings ---------- */
@@ -1694,7 +1831,8 @@ function startQuiz(list, label, backTab, meta){
   if(!list.length) return;
   meta = meta || {};
   quiz = { list:list, i:0, correct:0, label:label, log:[], answeredNow:false,
-           kind:meta.kind||'other', f:meta.f||null, ex:meta.ex||examScope };
+           kind:meta.kind||'other', f:meta.f||null, ex:meta.ex||examScope,
+           qStart:0, spent:0, timed:0 };
   quizTab = backTab || 'drill';
   saveQuiz();
   renderQuiz(); show('quiz');
@@ -1703,7 +1841,7 @@ function saveQuiz(){
   if(!quiz || quiz.i >= quiz.list.length){ S.quiz = null; }
   else S.quiz = { ids:quiz.list.map(function(q){return q.id}), i:quiz.i, correct:quiz.correct,
                   label:quiz.label, tab:quizTab, log:quiz.log, at:Date.now(),
-                  kind:quiz.kind, f:quiz.f, ex:quiz.ex };
+                  kind:quiz.kind, f:quiz.f, ex:quiz.ex, spent:quiz.spent, timed:quiz.timed };
   scheduleSave();
 }
 function resumeQuiz(){
@@ -1712,7 +1850,8 @@ function resumeQuiz(){
   if(list.length !== (r.ids||[]).length || !list.length){ S.quiz=null; scheduleSave(); renderHome(); return; }
   quiz = { list:list, i:Math.min(r.i||0, list.length), correct:r.correct||0,
            label:r.label||'続き', log:r.log||[], answeredNow:false,
-           kind:r.kind||'other', f:r.f||null, ex:r.ex||'g' };
+           kind:r.kind||'other', f:r.f||null, ex:r.ex||'g',
+           qStart:0, spent:r.spent||0, timed:r.timed||0 };
   examScope = quiz.ex;
   quizTab = r.tab || 'drill';
   renderQuiz(); show('quiz');
@@ -1725,7 +1864,8 @@ function renderQuiz(){
   var h = '';
   h += '<div class="qhead"><span class="prog"><span class="bar"><i style="width:'+
        Math.round(quiz.i/quiz.list.length*100)+'%"></i></span></span>'+
-       '<span class="cnt num">'+(quiz.i+1)+' / '+quiz.list.length+'</span></div>';
+       '<span class="cnt num">'+(quiz.i+1)+' / '+quiz.list.length+'</span>'+
+       '<span class="clock num" id="clock" title="この問題にかかっている時間">0:00</span></div>';
   h += '<div class="card">';
   h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">'+fieldChip(q.f)+
        '<span class="tiny muted" style="font-size:11px">'+esc(quiz.label)+'</span></div>';
@@ -1737,15 +1877,35 @@ function renderQuiz(){
   });
   h += '</div><div id="fb"></div></div>';
   document.getElementById('v-quiz').innerHTML = h;
+  startClock();
+}
+var clockTimer = null;
+function startClock(){
+  stopClock();
+  quiz.qStart = Date.now();
+  tickClock();
+  clockTimer = setInterval(tickClock, 1000);
+}
+function stopClock(){ if(clockTimer){ clearInterval(clockTimer); clockTimer = null; } }
+function tickClock(){
+  var el = document.getElementById('clock');
+  if(!el || !quiz || !quiz.qStart){ return; }
+  var sec = Math.floor((Date.now() - quiz.qStart)/1000);
+  el.textContent = Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+  var target = EXAMS[quiz.ex || examScope].sec;
+  el.className = 'clock num' + (sec > target*2 ? ' over' : (sec > target ? ' warn' : ''));
 }
 function pick(i){
   var q = quiz.list[quiz.i];
   if(quiz.answeredNow) return;
   quiz.answeredNow = true;
+  var ms = quiz.qStart ? (Date.now() - quiz.qStart) : 0;
+  stopClock();
+  if(ms > 0 && ms <= MAXMS){ quiz.spent += ms; quiz.timed++; }
   var correct = (i === q.a);
   if(correct) quiz.correct++;
-  record(q.id, correct);
-  quiz.log.push({id:q.id, correct:correct});
+  record(q.id, correct, ms);
+  quiz.log.push({id:q.id, correct:correct, ms:ms});
   Array.prototype.forEach.call(document.querySelectorAll('#opts .opt'), function(b){
     var idx = Number(b.dataset.pick);
     b.disabled = true;
@@ -1754,8 +1914,10 @@ function pick(i){
     else if(idx === i){ b.classList.add('ng'); if(mk) mk.textContent = '\u2715'; }
   });
   var info = TMAP[q.t];
+  var tsec = ms/1000, tgt = EXAMS[quiz.ex || examScope].sec;
   var h = '<div class="verdict '+(correct?'ok':'ng')+'">';
-  h += '<div class="v">'+(correct?'◎ 正解':'× 不正解')+'</div>';
+  h += '<div class="v">'+(correct?'◎ 正解':'× 不正解')+
+       (ms > 0 && ms <= MAXMS ? '<span class="qtime'+(tsec > tgt ? ' slow':'')+'">'+fmtSec(tsec)+'</span>' : '')+'</div>';
   h += '<div>'+rich(q.e)+'</div>';
   if(info) h += '<div class="lnk"><button data-act="topic:'+q.t+'">→ 教科書：'+esc(info.t.title)+'</button></div>';
   h += '</div>';
@@ -1776,7 +1938,8 @@ function renderResult(){
   var pass = isMock ? quiz.correct >= needed : pct >= 60;
   if(quiz.kind !== 'one'){
     S.sessions.unshift({at:Date.now(), label:quiz.label, total:quiz.list.length, correct:quiz.correct,
-                        kind:quiz.kind, f:quiz.f, ex:quiz.ex});
+                        kind:quiz.kind, f:quiz.f, ex:quiz.ex,
+                        spent:quiz.spent||0, timed:quiz.timed||0});
     S.sessions = S.sessions.slice(0,60);
   }
   S.quiz = null;
@@ -1790,6 +1953,25 @@ function renderResult(){
        (isMock ? (pass?'合格ライン到達（'+needed+'問以上）':'あと'+(needed-quiz.correct)+'問で合格ライン')
                : (pass?'よくできています':'復習しましょう'))+'</span>';
   h += '</div></div>';
+
+  if(quiz.timed){
+    var avg = quiz.spent/quiz.timed/1000;
+    var tgt = EXAMS[quiz.ex || examScope].sec;
+    var sp = speedScore(avg, quiz.ex);
+    var total = Math.round(pct*0.7 + sp*0.3);
+    var gr = gradeOf(total);
+    h += '<div class="card"><p class="eyebrow">ペース</p><div class="pacebar">'+
+      '<div><b>'+fmtSec(avg)+'</b><small>1問あたり</small></div>'+
+      '<div><b>'+sp+'</b><small>速度点</small></div>'+
+      '<div><b>'+pct+'</b><small>正答率</small></div>'+
+      '<div><b style="color:'+gr.c+'">'+gr.g+'</b><small>総合 '+total+'</small></div></div>';
+    h += '<p class="tiny muted" style="margin:9px 0 0">本番は'+esc(scopeName())+
+      (quiz.ex==='j'?'20問60分＝1問<b>180秒</b>':'60問60分＝1問<b>60秒</b>')+'。'+
+      (avg <= tgt ? '本番ペースに乗っています。' :
+       avg <= tgt*1.5 ? 'あと少し。見直しの時間を作るには1問'+tgt+'秒を目標に。' :
+       '本番だと時間が足りません。迷ったら飛ばす練習を。')+
+      '　総合点は正答率7割＋速度3割で出しています。</p></div>';
+  }
 
   var byF = {};
   quiz.log.forEach(function(l){
@@ -1971,6 +2153,8 @@ document.addEventListener('click', function(ev){
   if(k==='resume'){ resumeQuiz(); return; }
   if(k==='dropresume'){ S.quiz=null; scheduleSave(); renderHome(); return; }
   if(k==='cf'){ chartField = v || null; renderWeak(); return; }
+  if(k==='rb'){ rankBy = v; renderWeak(); return; }
+  if(k==='ru'){ rankUnit = v; renderWeak(); return; }
   if(k==='ask'){ openAsk(null, null); return; }
   if(k==='askq'){ openAsk('q', v); return; }
   if(k==='askt'){ openAsk('t', v); return; }
