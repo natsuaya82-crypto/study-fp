@@ -271,7 +271,7 @@ figure.fig figcaption{
 .rank .nm b{display:block; font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .rank .nm small{display:block; font-size:11px; color:var(--ink-3); margin-top:1px;
   font-family:"IBM Plex Mono",ui-monospace,monospace}
-.rank .sc{flex:none; width:38px; text-align:right; font-size:15px; font-weight:700;
+.rank .sc{flex:none; min-width:42px; text-align:right; font-size:15px; font-weight:700;
   font-family:"IBM Plex Mono",ui-monospace,monospace}
 .pacebar{display:flex; gap:1px; background:var(--line); border-radius:var(--r-s); overflow:hidden; margin-top:12px}
 .pacebar div{flex:1; background:var(--card); padding:9px 4px; text-align:center}
@@ -741,11 +741,19 @@ function fmtSec(v){
   if(v === null || v === undefined) return '—';
   return v >= 60 ? Math.floor(v/60)+'分'+String(Math.round(v%60)).padStart(2,'0')+'秒' : (Math.round(v*10)/10)+'秒';
 }
-/* 速度点：本番ペースちょうどで100点。速ければ頭打ちの100、遅いほど下がる */
+/* 速度点：本番ペースちょうどで100点。そこから上限なく伸びる。
+   ルート型にしてあるので、速いほど確実に強くなりつつ、
+   正答率の差が速さの差に飲まれすぎない */
 function speedScore(sec, ex){
-  if(sec === null || !sec) return null;
+  if(sec === null || !sec || sec <= 0) return null;
   var target = EXAMS[ex || examScope].sec;
-  return Math.max(0, Math.min(100, Math.round(target/sec*100)));
+  return Math.round(100 * Math.sqrt(target/sec));
+}
+/* 総合＝正答率×速度倍率。本番ペースで全問正解がちょうど100 */
+function totalScore(acc, sp){
+  if(acc === null) return null;
+  if(sp === null) return acc;
+  return Math.round(acc * sp / 100);
 }
 /* 問題ごとのブックマーク */
 function qbmOn(id){ return S.qbm.some(function(x){ return x.id === id; }); }
@@ -764,11 +772,12 @@ function starBtn(id){
   return '<button class="star'+(on?' on':'')+'" data-act="qbm:'+id+'" aria-pressed="'+on+'" '+
     'aria-label="'+(on?'ブックマークを外す':'あとで見直す')+'">'+(on?'★':'☆')+'</button>';
 }
+/* B が「本番ペースで全問正解」＝100。そこから上は本番より速いということ */
 function gradeOf(score){
   if(score === null) return {g:'—', c:'var(--ink-3)'};
-  if(score >= 90) return {g:'S', c:'var(--good)'};
-  if(score >= 80) return {g:'A', c:'var(--accent)'};
-  if(score >= 70) return {g:'B', c:'var(--f1)'};
+  if(score >= 250) return {g:'S', c:'var(--good)'};
+  if(score >= 170) return {g:'A', c:'var(--accent)'};
+  if(score >= 100) return {g:'B', c:'var(--f1)'};
   if(score >= 60) return {g:'C', c:'var(--warn)'};
   return {g:'D', c:'var(--bad)'};
 }
@@ -1550,8 +1559,7 @@ function rankRows(){
     r.timed = p ? p.n : 0;
     r.done = r.qs.filter(function(q){ return answered(q.id); }).length;
     r.speed = speedScore(r.sec, examScope);
-    r.score = (r.acc === null) ? null
-      : (r.speed === null ? r.acc : Math.round(r.acc*0.7 + r.speed*0.3));
+    r.score = totalScore(r.acc, r.speed);
   });
   return rows.filter(function(r){ return r.done >= 3; });
 }
@@ -1564,7 +1572,8 @@ function renderRank(){
     '<button data-act="scope:g" aria-pressed="'+(examScope==="g")+'">学科</button>'+
     '<button data-act="scope:j" aria-pressed="'+(examScope==="j")+'">実技</button></div>';
   h += '<div class="card"><p class="eyebrow">'+esc(scopeName())+'　'+
-    (examScope==='j'?'本番は20問60分＝1問180秒':'本番は60問60分＝1問60秒')+'</p>';
+    (examScope==='j'?'本番は20問60分＝1問180秒':'本番は60問60分＝1問60秒')+
+    '　→ そのペースで全問正解が100</p>';
   h += '<div class="fchips" style="--cc:var(--accent)">'+
     '<button data-act="ru:topic" aria-pressed="'+(rankUnit==='topic')+'">単元別</button>'+
     '<button data-act="ru:field" aria-pressed="'+(rankUnit==='field')+'">分野別</button>'+
@@ -1597,6 +1606,10 @@ function renderRank(){
       (r.acc===null?'—':r.acc+'%')+'　'+fmtSec(r.sec)+'/問</small></span>'+
       '<span class="sc" style="color:'+gr.c+'">'+(r.score===null?'—':r.score)+'</span></div>';
   });
+  h += '<p class="tiny muted" style="margin:10px 0 0">スコア＝<b>正答率×速度点÷100</b>。'+
+    '速度点は本番ペース（1問'+EXAMS[examScope].sec+'秒）で100で、'+
+    '<b>速いほど上限なく伸びます</b>。100を超えたら本番より速いということ。'+
+    '<br>D 60未満／C 60／B 100／A 170／S 250〜</p>';
   var last = rows[rows.length-1];
   if(rankBy !== 'sec' && last && last.score !== null){
     h += '<p class="tiny muted" style="margin:10px 0 0">いちばん下は<b>'+esc(last.name)+'</b>（'+
@@ -2104,7 +2117,7 @@ function renderResult(){
     var avg = quiz.spent/quiz.timed/1000;
     var tgt = EXAMS[quiz.ex || examScope].sec;
     var sp = speedScore(avg, quiz.ex);
-    var total = Math.round(pct*0.7 + sp*0.3);
+    var total = totalScore(pct, sp);
     var gr = gradeOf(total);
     h += '<div class="card"><p class="eyebrow">ペース</p><div class="pacebar">'+
       '<div><b>'+fmtSec(avg)+'</b><small>1問あたり</small></div>'+
@@ -2116,7 +2129,8 @@ function renderResult(){
       (avg <= tgt ? '本番ペースに乗っています。' :
        avg <= tgt*1.5 ? 'あと少し。見直しの時間を作るには1問'+tgt+'秒を目標に。' :
        '本番だと時間が足りません。迷ったら飛ばす練習を。')+
-      '　総合点は正答率7割＋速度3割で出しています。'+
+      '<br>速度点は本番ペースで100、<b>速いほど上限なく伸びます</b>。'+
+      '総合＝正答率×速度点÷100なので、<b>本番ペースで全問正解がちょうど100（B）</b>。'+
       (quiz.untimed ? '<br><b>'+quiz.untimed+'問</b>は長く中断したため計測外です（正誤は記録済み）。' : '')+
       '</p></div>';
   } else if(quiz.untimed){
