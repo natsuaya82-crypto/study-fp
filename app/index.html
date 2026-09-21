@@ -243,6 +243,13 @@ figure.fig figcaption{
 .qhead{display:flex; align-items:center; gap:8px; margin-bottom:10px}
 .qhead .prog{flex:1}
 .qhead .cnt{font-size:12px; color:var(--ink-2); flex:none}
+.qctx{
+  background:var(--sunk); border-left:3px solid var(--ink-3); border-radius:var(--r-s);
+  padding:12px 14px; margin:8px 0 14px; font-size:13.5px; line-height:1.75;
+}
+.qctx table{border-collapse:collapse; width:100%; margin:8px 0 2px; font-size:12.5px}
+.qctx th,.qctx td{border:1px solid var(--line-2); padding:6px 8px; text-align:left; vertical-align:top}
+.qctx th{background:var(--card); font-weight:700; white-space:nowrap; width:42%}
 .qtext{font-size:16px; line-height:1.8; font-weight:500; margin:6px 0 16px}
 .opt{
   width:100%; text-align:left; background:var(--card); border:1.5px solid var(--line-2);
@@ -275,6 +282,41 @@ figure.fig figcaption{
 .score .judge{display:inline-block; margin-top:12px; padding:5px 14px; border-radius:99px; font-size:13px; font-weight:700}
 .judge.pass{background:var(--good-soft); color:var(--good)}
 .judge.fail{background:var(--bad-soft); color:var(--bad)}
+
+/* ---- chart ---- */
+.seg{display:flex; gap:0; background:var(--sunk); border-radius:10px; padding:3px; margin:0 0 14px}
+.seg button{
+  flex:1; border:0; background:none; border-radius:8px; padding:8px 4px;
+  font-size:13px; font-weight:700; color:var(--ink-2);
+}
+.seg button[aria-pressed="true"]{background:var(--card); color:var(--ink); box-shadow:var(--shadow)}
+.fchips{display:flex; gap:6px; overflow-x:auto; padding:0 0 3px; margin:0 0 12px; -webkit-overflow-scrolling:touch}
+.fchips button{
+  flex:none; border:1px solid var(--line-2); background:var(--card); border-radius:99px;
+  padding:6px 12px; font-size:12px; font-weight:700; color:var(--ink-2); white-space:nowrap;
+}
+.fchips button[aria-pressed="true"]{background:var(--cc,var(--accent)); border-color:var(--cc,var(--accent)); color:#fff}
+.chartwrap{position:relative; margin:0 0 4px}
+.chartwrap svg{display:block; width:100%; height:auto; overflow:visible}
+.chartwrap .grid{stroke:var(--line); stroke-width:1}
+.chartwrap .pass{stroke:var(--ink-3); stroke-width:1.2; stroke-dasharray:4 4}
+.chartwrap .ln{fill:none; stroke:var(--cc,var(--accent)); stroke-width:2; stroke-linejoin:round; stroke-linecap:round}
+.chartwrap .pt{fill:var(--card); stroke:var(--cc,var(--accent)); stroke-width:2}
+.chartwrap .pt.last{fill:var(--cc,var(--accent))}
+.chartwrap .hit{fill:transparent; cursor:pointer}
+.chartwrap text{fill:var(--ink-3); font-size:9px}
+.chartwrap text.val{fill:var(--ink); font-size:10px; font-weight:700}
+.tip{
+  position:absolute; transform:translate(-50%,-115%); pointer-events:none;
+  background:var(--ink); color:var(--paper); border-radius:7px; padding:5px 9px;
+  font-size:11px; line-height:1.45; white-space:nowrap; z-index:5; font-weight:700;
+}
+.tip small{display:block; font-weight:400; opacity:.8; font-size:10px}
+.statrow{display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line);
+  border-radius:var(--r-s); overflow:hidden; margin-top:12px}
+.statrow div{background:var(--card); padding:9px 4px; text-align:center}
+.statrow b{display:block; font-size:17px; font-weight:600}
+.statrow small{display:block; font-size:10px; color:var(--ink-3); margin-top:1px}
 
 /* ---- weak ---- */
 .wq{border-top:1px solid var(--line); padding:12px 0}
@@ -449,13 +491,30 @@ mark.hl{
 <script src="data/q5.js"></script>
 <script src="data/q6.js"></script>
 <script src="data/q7.js"></script>
+<script src="data/j1.js"></script>
 <script>
 (function(){
 "use strict";
 var TB = window.FP_TEXTBOOK || {};
 var QS = window.FP_QUESTIONS || [];
 var FIELDS = ['f1','f2','f3','f4','f5','f6'];
-var QBY = {}; FIELDS.forEach(function(f){ QBY[f] = QS.filter(function(q){return q.f===f}); });
+var EXAMS = { g:{key:'g', name:'学科', mock:60, per:10}, j:{key:'j', name:'実技', mock:20, per:4} };
+var examScope = 'g';
+function exOf(q){ return q.ex === 'j' ? 'j' : 'g'; }
+var QBY = {};   // QBY[scope][field]
+function rebuildPools(){
+  QBY = { g:{}, j:{} };
+  FIELDS.forEach(function(f){ QBY.g[f] = []; QBY.j[f] = []; });
+  QS.forEach(function(q){ var e = exOf(q); if(QBY[e][q.f]) QBY[e][q.f].push(q); });
+}
+function pool(scope){
+  scope = scope || examScope;
+  var out = [];
+  FIELDS.forEach(function(f){ out = out.concat(QBY[scope][f] || []); });
+  return out;
+}
+function poolBy(f, scope){ return (QBY[scope || examScope][f]) || []; }
+function scopeName(){ return EXAMS[examScope].name; }
 var QMAP = {}; QS.forEach(function(q){ QMAP[q.id]=q; });
 var TMAP = {}; FIELDS.forEach(function(f){ if(TB[f]) TB[f].topics.forEach(function(t){ TMAP[t.id]={t:t,f:f}; }); });
 var ALLTOPICS = 0; FIELDS.forEach(function(f){ if(TB[f]) ALLTOPICS += TB[f].topics.length; });
@@ -548,7 +607,8 @@ function addQuestions(list){
   list.forEach(function(q){
     if(QMAP[q.id]) return;
     QS.push(q); QMAP[q.id] = q;
-    if(QBY[q.f]) QBY[q.f].push(q);
+    var e = exOf(q);
+    if(QBY[e] && QBY[e][q.f]) QBY[e][q.f].push(q);
   });
 }
 function registerGen(){ addQuestions(S.gen.filter(function(g){ return g && g.id; })); }
@@ -576,7 +636,7 @@ function record(id, correct){
   scheduleSave();
 }
 function weakList(){
-  return QS.filter(function(q){ var st=stat(q.id); return st && st.w>0; })
+  return pool().filter(function(q){ var st=stat(q.id); return st && st.w>0; })
     .sort(function(a,b){
       var A=stat(a.id), B=stat(b.id);
       var ra = A.w/A.n, rb = B.w/B.n;
@@ -585,7 +645,7 @@ function weakList(){
     });
 }
 function dueList(){
-  var seen = QS.filter(function(q){ return answered(q.id) && isDue(q.id); });
+  var seen = pool().filter(function(q){ return answered(q.id) && isDue(q.id); });
   seen.sort(function(a,b){ return dueAt(a.id)-dueAt(b.id); });
   return seen;
 }
@@ -635,6 +695,7 @@ document.getElementById('setBtn').addEventListener('click', function(){ renderSe
 /* ---------- theme ---------- */
 var themeBtn = document.getElementById('themeBtn');
 try{ var th = localStorage.getItem(LS+'-theme'); if(th) document.documentElement.setAttribute('data-theme', th); }catch(e){}
+try{ var sc = localStorage.getItem(LS+'-scope'); if(sc==='g'||sc==='j') examScope = sc; }catch(e){}
 themeBtn.addEventListener('click', function(){
   var r = document.documentElement;
   var now = r.getAttribute('data-theme');
@@ -690,10 +751,10 @@ function renderHome(){
   }
   h += '</div>';
 
-  h += '<div class="card"><p class="eyebrow">分野別の到達度</p>';
+  h += '<div class="card"><p class="eyebrow">分野別の到達度（'+esc(scopeName())+'）</p>';
   FIELDS.forEach(function(f){
     if(!TB[f]) return;
-    var qs = QBY[f];
+    var qs = poolBy(f);
     var a = accuracy(qs);
     var done = qs.filter(function(q){return answered(q.id)}).length;
     var pct = qs.length ? Math.round(done/qs.length*100) : 0;
@@ -780,7 +841,7 @@ function renderBook(){
     var f2 = bookView.field, fd = TB[f2];
     h += '<button class="btn ghost" style="width:auto;padding:7px 12px;font-size:12.5px" data-act="book:">← 分野一覧</button>';
     h += '<h2 class="disp" style="font-size:19px;margin:14px 0 2px">'+esc(fd.title)+'</h2>';
-    var qsF = QBY[f2], aF = accuracy(qsF);
+    var qsF = poolBy(f2, 'g'), aF = accuracy(qsF);
     h += '<p class="tiny muted" style="margin:0 0 4px">'+fd.topics.length+'章 ・ '+qsF.length+'問 ・ 正答率 '+(aF===null?'—':aF+'%')+'</p>';
     fd.topics.forEach(function(t){
       var read = !!S.read[t.id];
@@ -1021,8 +1082,12 @@ function allMarks(){
 }
 function renderDrill(){
   var due = dueList(), weak = weakList();
-  var h = '<h2 class="disp" style="font-size:19px;margin:2px 0 2px">演習</h2>';
-  h += '<p class="tiny muted" style="margin:0 0 12px">全'+QS.length+'問。解いた結果は自動で記録されます。</p>';
+  var h = '<h2 class="disp" style="font-size:19px;margin:2px 0 10px">演習</h2>';
+  h += '<div class="seg">'+
+    '<button data-act="scope:g" aria-pressed="'+(examScope==="g")+'">学科</button>'+
+    '<button data-act="scope:j" aria-pressed="'+(examScope==="j")+'">実技</button></div>';
+  h += '<p class="tiny muted" style="margin:0 0 12px">'+esc(scopeName())+' '+pool().length+
+       '問。解いた結果は自動で記録され、推移は「記録と弱点」で見られます。</p>';
 
   h += '<div class="card"><p class="eyebrow">確認テスト</p>';
   h += '<div class="todo"><span class="t"><b>復習テスト</b><small>'+
@@ -1031,7 +1096,9 @@ function renderDrill(){
   h += '<div class="todo"><span class="t"><b>弱点つぶし</b><small>'+
     (weak.length ? '間違えた'+weak.length+'問から出題' : 'まだ間違いの記録がありません')+'</small></span>'+
     '<button class="go" data-act="weak" '+(weak.length?'':'disabled style="opacity:.4"')+'>開始</button></div>';
-  h += '<div class="todo"><span class="t"><b>模試60問</b><small>本番と同じ構成・合格ラインは36問</small></span>'+
+  var mk = EXAMS[examScope];
+  h += '<div class="todo"><span class="t"><b>'+esc(scopeName())+'模試 '+mk.mock+'問</b><small>'+
+    (examScope==='g' ? '本番と同じ構成・合格ラインは36問' : '全分野から出題・合格ラインは6割')+'</small></span>'+
     '<button class="go" data-act="mock">開始</button></div>';
   h += '<div class="todo"><span class="t"><b>ランダム20問</b><small>全分野からまんべんなく</small></span>'+
     '<button class="go" data-act="random">開始</button></div>';
@@ -1042,32 +1109,139 @@ function renderDrill(){
   }
   h += '</div>';
 
-  h += '<div class="card"><p class="eyebrow">分野別</p>';
+  h += '<div class="card"><p class="eyebrow">分野別（毎回ランダム'+FIELD_N+'問）</p>';
+  var any = false;
   FIELDS.forEach(function(f){
     if(!TB[f]) return;
-    var qs = QBY[f], a = accuracy(qs);
+    var qs = poolBy(f); if(!qs.length) return;
+    any = true;
+    var a = accuracy(qs);
+    var n = Math.min(FIELD_N, qs.length);
     var done = qs.filter(function(q){return answered(q.id)}).length;
     h += '<button class="rowbtn" data-act="field:'+f+'">';
     h += '<span class="lead" style="background:var(--'+f+')"></span>';
-    h += '<span class="body"><b>'+esc(TB[f].title)+'</b><small>'+qs.length+'問中 '+done+'問 解答済み</small></span>';
+    h += '<span class="body"><b>'+esc(TB[f].title)+'</b><small>'+n+'問を出題　（全'+qs.length+
+         '問中 '+done+'問 解答済み）</small></span>';
     h += '<span class="end"><span class="pct num">'+(a===null?'—':a+'%')+'</span></span></button>';
   });
+  if(!any) h += '<div class="empty">この区分の問題がまだありません。</div>';
   h += '</div>';
   document.getElementById('v-drill').innerHTML = h;
 }
+
+/* ---------- score chart ---------- */
+var chartField = null;
+
+function sessionsFor(){
+  return (S.sessions||[]).filter(function(x){
+    if(!x || !x.total) return false;
+    if((x.ex || 'g') !== examScope) return false;
+    if(chartField && x.f !== chartField) return false;
+    if(!chartField && x.kind === 'topic') return false;
+    return true;
+  }).slice().sort(function(a,b){ return a.at - b.at; });
+}
+
+function renderChart(){
+  var data = sessionsFor();
+  var cc = chartField ? ('var(--'+chartField+')') : 'var(--accent)';
+  var h = '<div class="fchips" id="fchips" style="--cc:'+cc+'">';
+  h += '<button data-act="cf:" aria-pressed="'+(!chartField)+'">全体</button>';
+  FIELDS.forEach(function(f){
+    if(!TB[f]) return;
+    h += '<button data-act="cf:'+f+'" aria-pressed="'+(chartField===f)+'" style="--cc:var(--'+f+')">'+esc(TB[f].short)+'</button>';
+  });
+  h += '</div>';
+
+  if(data.length < 1){
+    h += '<div class="empty">まだ'+esc(scopeName())+'の記録がありません。<br>演習を1回やると、ここに点数の推移が出ます。</div>';
+    return h;
+  }
+
+  var W = 360, H = 176, L = 28, R = 30, TP = 14, B = 28;
+  var pw = W - L - R, ph = H - TP - B;
+  var n = data.length;
+  var X = function(i){ return n === 1 ? L + pw/2 : L + pw * i/(n-1); };
+  var Y = function(v){ return TP + ph * (1 - v/100); };
+  var pct = data.map(function(d){ return Math.round(d.correct/d.total*100); });
+
+  var g = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(scopeName())+
+          (chartField?'・'+esc(TB[chartField].short):'')+'の正答率の推移。'+
+          pct.map(function(p,i){return (i+1)+'回目'+p+'パーセント'}).join('、')+'">';
+  [0,25,50,75,100].forEach(function(v){
+    g += '<line class="grid" x1="'+L+'" y1="'+Y(v)+'" x2="'+(W-R)+'" y2="'+Y(v)+'"/>';
+    g += '<text x="'+(L-6)+'" y="'+(Y(v)+3)+'" text-anchor="end">'+v+'</text>';
+  });
+  g += '<line class="pass" x1="'+L+'" y1="'+Y(60)+'" x2="'+(W-R)+'" y2="'+Y(60)+'"/>';
+  g += '<text x="'+(W-R+3)+'" y="'+(Y(60)+3)+'" text-anchor="start">合格</text>';
+
+  if(n > 1){
+    g += '<polyline class="ln" points="'+pct.map(function(v,i){ return X(i)+','+Y(v); }).join(' ')+'"/>';
+  }
+  pct.forEach(function(v,i){
+    var last = i === n-1;
+    g += '<circle class="pt'+(last?' last':'')+'" cx="'+X(i)+'" cy="'+Y(v)+'" r="'+(last?4.5:3.5)+'"/>';
+    g += '<circle class="hit" cx="'+X(i)+'" cy="'+Y(v)+'" r="16" data-pt="'+i+'"/>';
+  });
+  var lv = pct[n-1];
+  g += '<text class="val" x="'+(X(n-1)+8)+'" y="'+(Y(lv)+(lv>85?12:-7))+'" text-anchor="'+(n===1?'middle':'end')+'">'+lv+'%</text>';
+  var d0 = new Date(data[0].at), d1 = new Date(data[n-1].at);
+  g += '<text x="'+L+'" y="'+(H-10)+'" text-anchor="start">'+(d0.getMonth()+1)+'/'+d0.getDate()+'</text>';
+  if(n > 1) g += '<text x="'+(W-R)+'" y="'+(H-10)+'" text-anchor="end">'+(d1.getMonth()+1)+'/'+d1.getDate()+'</text>';
+  g += '</svg>';
+
+  h += '<div class="chartwrap" id="chartwrap" style="--cc:'+cc+'">'+g+'<div id="tip" hidden></div></div>';
+
+  var sum = pct.reduce(function(a,b){return a+b;},0);
+  var avg = Math.round(sum/n), best = Math.max.apply(null,pct);
+  var delta = n>1 ? pct[n-1]-pct[n-2] : null;
+  h += '<div class="statrow">';
+  h += '<div><b class="num">'+pct[n-1]+'%</b><small>直近</small></div>';
+  h += '<div><b class="num">'+avg+'%</b><small>平均</small></div>';
+  h += '<div><b class="num">'+best+'%</b><small>最高</small></div>';
+  h += '<div><b class="num">'+(delta===null?'—':(delta>0?'+':'')+delta)+'</b><small>前回比</small></div>';
+  h += '</div>';
+  h += '<p class="tiny muted" style="margin:9px 0 0">'+n+'回ぶんの記録。点をタップすると日付と点数が出ます。破線は合格ライン（6割）。</p>';
+  return h;
+}
+
+function showTip(i){
+  var data = sessionsFor(), d = data[i];
+  var wrap = document.getElementById('chartwrap'), tip = document.getElementById('tip');
+  if(!d || !wrap || !tip) return;
+  var hit = wrap.querySelector('[data-pt="'+i+'"]');
+  if(!hit) return;
+  var hr = hit.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+  var dt = new Date(d.at);
+  tip.className = 'tip';
+  tip.innerHTML = '<b>'+d.correct+' / '+d.total+'　'+Math.round(d.correct/d.total*100)+'%</b>'+
+    '<small>'+(dt.getMonth()+1)+'/'+dt.getDate()+' '+String(dt.getHours()).padStart(2,'0')+':'+
+    String(dt.getMinutes()).padStart(2,'0')+'　'+esc(d.label||'')+'</small>';
+  tip.style.left = (hr.left - wr.left + hr.width/2) + 'px';
+  tip.style.top = (hr.top - wr.top) + 'px';
+  tip.hidden = false;
+  if(tipTimer) clearTimeout(tipTimer);
+  tipTimer = setTimeout(function(){ tip.hidden = true; }, 3200);
+}
+var tipTimer = null;
 
 /* ---------- weak view ---------- */
 function renderWeak(){
   var weak = weakList();
   var due = dueList();
-  var h = '<h2 class="disp" style="font-size:19px;margin:2px 0 2px">弱点</h2>';
-  h += '<p class="tiny muted" style="margin:0 0 12px">間違えた問題は自動でここに残ります。</p>';
+  var h = '<h2 class="disp" style="font-size:19px;margin:2px 0 10px">記録と弱点</h2>';
+  h += '<div class="seg">'+
+    '<button data-act="scope:g" aria-pressed="'+(examScope==="g")+'">学科</button>'+
+    '<button data-act="scope:j" aria-pressed="'+(examScope==="j")+'">実技</button></div>';
+  h += '<div class="card"><p class="eyebrow">得点の推移</p>';
+  h += renderChart();
+  h += '</div>';
 
-  h += '<div class="card"><p class="eyebrow">分野別の正答率</p>';
+  h += '<div class="card"><p class="eyebrow">分野別の正答率（'+esc(scopeName())+'）</p>';
   var worst = null;
   FIELDS.forEach(function(f){
     if(!TB[f]) return;
-    var a = accuracy(QBY[f]);
+    var a = accuracy(poolBy(f));
     if(a!==null && (worst===null || a<worst.a)) worst = {f:f, a:a};
     h += '<div style="display:flex;align-items:center;gap:9px;padding:7px 0">';
     h += '<span style="flex:none;width:74px;font-size:12px;font-weight:700">'+esc(TB[f].short)+'</span>';
@@ -1204,7 +1378,7 @@ function ctxText(c){
   if(c.kind==='q'){
     var q = QMAP[c.id]; if(!q) return '';
     var opts = q.type==='ox' ? ['○（正しい）','×（誤り）'] : q.c;
-    return '【いま解いた問題】\n' + q.q + '\n' +
+    return '【いま解いた問題】\n' + (q.ctx ? strip(q.ctx.replace(/<\/(tr|table|div|p)>/g,'\n')) + '\n' : '') + q.q + '\n' +
       opts.map(function(o,i){ return (i+1)+'. '+o+(i===q.a?'  ←正解':''); }).join('\n') +
       '\n解説：' + q.e;
   }
@@ -1361,7 +1535,7 @@ function weakBrief(){
   var rates = [];
   FIELDS.forEach(function(f){
     if(!TB[f]) return;
-    var a = accuracy(QBY[f]);
+    var a = accuracy(poolBy(f));
     if(a!==null) rates.push({f:f, a:a});
   });
   rates.sort(function(x,y){ return x.a-y.a; });
@@ -1455,9 +1629,11 @@ function generate(n, fieldOnly){
 
 /* ---------- quiz engine ---------- */
 var quiz = null, quizTab = 'drill';
-function startQuiz(list, label, backTab){
+function startQuiz(list, label, backTab, meta){
   if(!list.length) return;
-  quiz = { list:list, i:0, correct:0, label:label, log:[], answeredNow:false };
+  meta = meta || {};
+  quiz = { list:list, i:0, correct:0, label:label, log:[], answeredNow:false,
+           kind:meta.kind||'other', f:meta.f||null, ex:meta.ex||examScope };
   quizTab = backTab || 'drill';
   saveQuiz();
   renderQuiz(); show('quiz');
@@ -1465,7 +1641,8 @@ function startQuiz(list, label, backTab){
 function saveQuiz(){
   if(!quiz || quiz.i >= quiz.list.length){ S.quiz = null; }
   else S.quiz = { ids:quiz.list.map(function(q){return q.id}), i:quiz.i, correct:quiz.correct,
-                  label:quiz.label, tab:quizTab, log:quiz.log, at:Date.now() };
+                  label:quiz.label, tab:quizTab, log:quiz.log, at:Date.now(),
+                  kind:quiz.kind, f:quiz.f, ex:quiz.ex };
   scheduleSave();
 }
 function resumeQuiz(){
@@ -1473,7 +1650,9 @@ function resumeQuiz(){
   var list = (r.ids||[]).map(function(id){ return QMAP[id]; }).filter(Boolean);
   if(list.length !== (r.ids||[]).length || !list.length){ S.quiz=null; scheduleSave(); renderHome(); return; }
   quiz = { list:list, i:Math.min(r.i||0, list.length), correct:r.correct||0,
-           label:r.label||'続き', log:r.log||[], answeredNow:false };
+           label:r.label||'続き', log:r.log||[], answeredNow:false,
+           kind:r.kind||'other', f:r.f||null, ex:r.ex||'g' };
+  examScope = quiz.ex;
   quizTab = r.tab || 'drill';
   renderQuiz(); show('quiz');
 }
@@ -1489,6 +1668,7 @@ function renderQuiz(){
   h += '<div class="card">';
   h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">'+fieldChip(q.f)+
        '<span class="tiny muted" style="font-size:11px">'+esc(quiz.label)+'</span></div>';
+  if(q.ctx) h += '<div class="qctx">'+q.ctx+'</div>';
   h += '<div class="qtext">'+esc(q.q)+'</div>';
   h += '<div id="opts">';
   opts.forEach(function(o,i){
@@ -1530,9 +1710,11 @@ function pick(i){
 }
 function renderResult(){
   var pct = Math.round(quiz.correct/quiz.list.length*100);
-  var isMock = quiz.list.length===60;
-  var pass = isMock ? quiz.correct>=36 : pct>=60;
-  S.sessions.unshift({at:Date.now(), label:quiz.label, total:quiz.list.length, correct:quiz.correct});
+  var isMock = quiz.kind === 'mock';
+  var needed = Math.ceil(quiz.list.length * 0.6);
+  var pass = isMock ? quiz.correct >= needed : pct >= 60;
+  S.sessions.unshift({at:Date.now(), label:quiz.label, total:quiz.list.length, correct:quiz.correct,
+                      kind:quiz.kind, f:quiz.f, ex:quiz.ex});
   S.sessions = S.sessions.slice(0,60);
   S.quiz = null;
   scheduleSave();
@@ -1542,7 +1724,8 @@ function renderResult(){
   h += '<b class="num disp">'+quiz.correct+'</b>';
   h += '<div class="of">/ '+quiz.list.length+'問　正答率 '+pct+'%</div>';
   h += '<span class="judge '+(pass?'pass':'fail')+'">'+
-       (isMock ? (pass?'合格ライン到達（36問以上）':'あと'+(36-quiz.correct)+'問で合格ライン') : (pass?'よくできています':'復習しましょう'))+'</span>';
+       (isMock ? (pass?'合格ライン到達（'+needed+'問以上）':'あと'+(needed-quiz.correct)+'問で合格ライン')
+               : (pass?'よくできています':'復習しましょう'))+'</span>';
   h += '</div></div>';
 
   var byF = {};
@@ -1588,14 +1771,15 @@ function renderResult(){
 
 /* ---------- quiz builders ---------- */
 function mockSet(){
-  var out = [];
-  FIELDS.forEach(function(f){ out = out.concat(shuffle(QBY[f]).slice(0,10)); });
-  if(out.length < 60){
-    var rest = shuffle(QS.filter(function(q){ return out.indexOf(q)<0; }));
-    out = out.concat(rest.slice(0, 60-out.length));
+  var cfg = EXAMS[examScope], want = cfg.mock, out = [];
+  FIELDS.forEach(function(f){ out = out.concat(shuffle(poolBy(f)).slice(0, cfg.per)); });
+  if(out.length < want){
+    var rest = shuffle(pool().filter(function(q){ return out.indexOf(q)<0; }));
+    out = out.concat(rest.slice(0, want-out.length));
   }
-  return shuffle(out).slice(0,60);
+  return shuffle(out).slice(0, want);
 }
+var FIELD_N = 20;
 function pickWeak(n){
   var w = weakList();
   var d = dueList().filter(function(q){ return w.indexOf(q)<0; });
@@ -1618,6 +1802,8 @@ document.addEventListener('click', function(ev){
       }
     }
   }
+  var ptEl = ev.target.closest ? ev.target.closest('[data-pt]') : null;
+  if(ptEl){ showTip(Number(ptEl.dataset.pt)); return; }
   var el2 = ev.target.closest ? ev.target.closest('[data-act],[data-pick],[data-sugg]') : null;
   if(!el2) return;
   if(el2.hasAttribute('data-pick')){ pick(Number(el2.dataset.pick)); return; }
@@ -1633,18 +1819,33 @@ document.addEventListener('click', function(ev){
     scheduleSave(); renderBook(); renderHome(); return;
   }
   if(k==='field'){
-    var qs = shuffle(QBY[v]);
-    startQuiz(qs, TB[v] ? TB[v].title : '分野別', 'drill'); return;
+    var qs = shuffle(poolBy(v)).slice(0, FIELD_N);
+    startQuiz(qs, (TB[v] ? TB[v].short : '分野別') + ' ' + qs.length + '問',
+              'drill', {kind:'field', f:v, ex:examScope}); return;
+  }
+  if(k==='scope'){
+    if(v!==examScope){
+      examScope = v;
+      try{ localStorage.setItem(LS+'-scope', v); }catch(e){}
+      chartField = null;
+      render();
+    }
+    return;
   }
   if(k==='topicquiz'){
     var tq = shuffle(QS.filter(function(q){return q.t===v}));
     var inf = TMAP[v];
-    startQuiz(tq, inf ? inf.t.title : '章別', 'book'); return;
+    startQuiz(tq, inf ? inf.t.title : '章別', 'book', {kind:'topic', f:(inf?inf.f:null), ex:'g'}); return;
   }
-  if(k==='review'){ startQuiz(shuffle(dueList()).slice(0,20), '復習テスト', 'drill'); return; }
-  if(k==='weak'){ startQuiz(shuffle(pickWeak(20)), '弱点つぶし', 'drill'); return; }
-  if(k==='mock'){ startQuiz(mockSet(), '模試60問', 'drill'); return; }
-  if(k==='random'){ startQuiz(shuffle(QS).slice(0,20), 'ランダム20問', 'drill'); return; }
+  if(k==='review'){ startQuiz(shuffle(dueList()).slice(0,20), '復習テスト', 'drill', {kind:'review'}); return; }
+  if(k==='weak'){ startQuiz(shuffle(pickWeak(20)), '弱点つぶし', 'drill', {kind:'weak'}); return; }
+  if(k==='mock'){
+    var ms = mockSet();
+    startQuiz(ms, scopeName()+'模試 '+ms.length+'問', 'drill', {kind:'mock'}); return;
+  }
+  if(k==='random'){
+    startQuiz(shuffle(pool()).slice(0,20), scopeName()+'ランダム20問', 'drill', {kind:'random'}); return;
+  }
   if(k==='retry'){
     var ids = (quiz && quiz.wrongIds) || [];
     var rq = ids.map(function(i){return QMAP[i]}).filter(Boolean);
@@ -1701,6 +1902,7 @@ document.addEventListener('click', function(ev){
   if(k==='bmdel'){ S.bm = S.bm.filter(function(b){ return b.id!==v; }); scheduleSave(); renderBook(); return; }
   if(k==='resume'){ resumeQuiz(); return; }
   if(k==='dropresume'){ S.quiz=null; scheduleSave(); renderHome(); return; }
+  if(k==='cf'){ chartField = v || null; renderWeak(); return; }
   if(k==='ask'){ openAsk(null, null); return; }
   if(k==='askq'){ openAsk('q', v); return; }
   if(k==='askt'){ openAsk('t', v); return; }
@@ -1734,6 +1936,7 @@ document.addEventListener('scroll', function(){
 
 /* ---------- boot ---------- */
 function render(){ renderHome(); renderBook(); renderDrill(); renderWeak(); renderAsk(); }
+rebuildPools();
 loadLocal();
 registerGen();
 render();
