@@ -581,7 +581,9 @@ var QS = window.FP_QUESTIONS || [];
 var FIELDS = ['f1','f2','f3','f4','f5','f6'];
 /* sec は本番のペース。学科は60問60分＝1問60秒、実技は20問60分＝1問180秒 */
 var EXAMS = { g:{key:'g', name:'学科', mock:60, per:10, sec:60}, j:{key:'j', name:'実技', mock:20, per:4, sec:180} };
-var MAXMS = 180000; /* これを超えたら「手を止めていた」とみなして時間は記録しない */
+/* この時間を超えたら「解いていたのではなく中断していた」とみなす。
+   学科は5分、実技は15分。目安時間の5倍を下限300秒で取る */
+function capMs(ex){ return Math.max(300, EXAMS[ex || examScope].sec * 5) * 1000; }
 var examScope = 'g';
 function exOf(q){ return q.ex === 'j' ? 'j' : 'g'; }
 var QBY = {};   // QBY[scope][field]
@@ -719,7 +721,7 @@ function record(id, correct, ms){
   st.n = (st.n||0)+1;
   if(correct){ st.st = (st.st||0)+1; } else { st.w = (st.w||0)+1; st.st = 0; }
   st.t = Date.now();
-  if(ms > 0 && ms <= MAXMS){
+  if(ms > 0){
     /* 解答にかかった時間の移動平均。mn は時間を測れた回数 */
     var mn = (st.mn||0) + 1;
     st.ms = st.ms ? Math.round((st.ms*(mn-1) + ms)/mn) : ms;
@@ -1959,7 +1961,7 @@ function startQuiz(list, label, backTab, meta){
   meta = meta || {};
   quiz = { list:list, i:0, correct:0, label:label, log:[], answeredNow:false,
            kind:meta.kind||'other', f:meta.f||null, ex:meta.ex||examScope,
-           qStart:0, spent:0, timed:0 };
+           qStart:0, qStartIdx:-1, spent:0, timed:0, untimed:0 };
   quizTab = backTab || 'drill';
   saveQuiz();
   renderQuiz(); show('quiz');
@@ -1968,7 +1970,8 @@ function saveQuiz(){
   if(!quiz || quiz.i >= quiz.list.length){ S.quiz = null; }
   else S.quiz = { ids:quiz.list.map(function(q){return q.id}), i:quiz.i, correct:quiz.correct,
                   label:quiz.label, tab:quizTab, log:quiz.log, at:Date.now(),
-                  kind:quiz.kind, f:quiz.f, ex:quiz.ex, spent:quiz.spent, timed:quiz.timed };
+                  kind:quiz.kind, f:quiz.f, ex:quiz.ex, spent:quiz.spent, timed:quiz.timed,
+                  qStart:quiz.qStart, qStartIdx:quiz.qStartIdx, untimed:quiz.untimed };
   scheduleSave();
 }
 function resumeQuiz(){
@@ -1978,7 +1981,8 @@ function resumeQuiz(){
   quiz = { list:list, i:Math.min(r.i||0, list.length), correct:r.correct||0,
            label:r.label||'続き', log:r.log||[], answeredNow:false,
            kind:r.kind||'other', f:r.f||null, ex:r.ex||'g',
-           qStart:0, spent:r.spent||0, timed:r.timed||0 };
+           qStart:r.qStart||0, qStartIdx:(r.qStartIdx===undefined?-1:r.qStartIdx),
+           spent:r.spent||0, timed:r.timed||0, untimed:r.untimed||0 };
   examScope = quiz.ex;
   quizTab = r.tab || 'drill';
   renderQuiz(); show('quiz');
@@ -2008,9 +2012,15 @@ function renderQuiz(){
   startClock();
 }
 var clockTimer = null;
+/* 計測はその問題を最初に開いた時刻から。画面を離れても、中断から再開しても
+   引き継ぐので、調べてから戻ってもタイムは戻らない */
 function startClock(){
   stopClock();
-  quiz.qStart = Date.now();
+  if(quiz.qStartIdx !== quiz.i || !quiz.qStart){
+    quiz.qStart = Date.now();
+    quiz.qStartIdx = quiz.i;
+    saveQuiz();
+  }
   tickClock();
   clockTimer = setInterval(tickClock, 1000);
 }
@@ -2018,9 +2028,14 @@ function stopClock(){ if(clockTimer){ clearInterval(clockTimer); clockTimer = nu
 function tickClock(){
   var el = document.getElementById('clock');
   if(!el || !quiz || !quiz.qStart){ return; }
-  var sec = Math.floor((Date.now() - quiz.qStart)/1000);
-  el.textContent = Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+  var ms = Date.now() - quiz.qStart, sec = Math.floor(ms/1000);
   var target = EXAMS[quiz.ex || examScope].sec;
+  if(ms > capMs(quiz.ex)){
+    el.textContent = '計測外';
+    el.className = 'clock over';
+    return;
+  }
+  el.textContent = Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
   el.className = 'clock num' + (sec > target*2 ? ' over' : (sec > target ? ' warn' : ''));
 }
 function pick(i){
@@ -2028,12 +2043,14 @@ function pick(i){
   if(quiz.answeredNow) return;
   quiz.answeredNow = true;
   var ms = quiz.qStart ? (Date.now() - quiz.qStart) : 0;
+  var over = !(ms > 0 && ms <= capMs(quiz.ex));
   stopClock();
-  if(ms > 0 && ms <= MAXMS){ quiz.spent += ms; quiz.timed++; }
+  quiz.qStart = 0; quiz.qStartIdx = -1;
+  if(over) quiz.untimed++; else { quiz.spent += ms; quiz.timed++; }
   var correct = (i === q.a);
   if(correct) quiz.correct++;
-  record(q.id, correct, ms);
-  quiz.log.push({id:q.id, correct:correct, ms:ms});
+  record(q.id, correct, over ? 0 : ms);
+  quiz.log.push({id:q.id, correct:correct, ms:over ? 0 : ms});
   Array.prototype.forEach.call(document.querySelectorAll('#opts .opt'), function(b){
     var idx = Number(b.dataset.pick);
     b.disabled = true;
@@ -2045,7 +2062,8 @@ function pick(i){
   var tsec = ms/1000, tgt = EXAMS[quiz.ex || examScope].sec;
   var h = '<div class="verdict '+(correct?'ok':'ng')+'">';
   h += '<div class="v">'+(correct?'◎ 正解':'× 不正解')+
-       (ms > 0 && ms <= MAXMS ? '<span class="qtime'+(tsec > tgt ? ' slow':'')+'">'+fmtSec(tsec)+'</span>' : '')+'</div>';
+       (over ? '<span class="qtime slow" title="長く中断したため時間は記録されません">中断・計測外</span>'
+             : '<span class="qtime'+(tsec > tgt ? ' slow':'')+'">'+fmtSec(tsec)+'</span>')+'</div>';
   h += '<div>'+rich(q.e)+'</div>';
   if(info) h += '<div class="lnk"><button data-act="topic:'+q.t+'">→ 教科書：'+esc(info.t.title)+'</button></div>';
   h += '</div>';
@@ -2067,7 +2085,7 @@ function renderResult(){
   if(quiz.kind !== 'one'){
     S.sessions.unshift({at:Date.now(), label:quiz.label, total:quiz.list.length, correct:quiz.correct,
                         kind:quiz.kind, f:quiz.f, ex:quiz.ex,
-                        spent:quiz.spent||0, timed:quiz.timed||0});
+                        spent:quiz.spent||0, timed:quiz.timed||0, untimed:quiz.untimed||0});
     S.sessions = S.sessions.slice(0,60);
   }
   S.quiz = null;
@@ -2098,7 +2116,13 @@ function renderResult(){
       (avg <= tgt ? '本番ペースに乗っています。' :
        avg <= tgt*1.5 ? 'あと少し。見直しの時間を作るには1問'+tgt+'秒を目標に。' :
        '本番だと時間が足りません。迷ったら飛ばす練習を。')+
-      '　総合点は正答率7割＋速度3割で出しています。</p></div>';
+      '　総合点は正答率7割＋速度3割で出しています。'+
+      (quiz.untimed ? '<br><b>'+quiz.untimed+'問</b>は長く中断したため計測外です（正誤は記録済み）。' : '')+
+      '</p></div>';
+  } else if(quiz.untimed){
+    h += '<div class="card"><p class="eyebrow">ペース</p><div class="empty">'+
+      'すべての問題で長い中断があったため、時間は記録されていません。<br>'+
+      '正誤はふつうに記録されています。</div></div>';
   }
 
   var byF = {};
