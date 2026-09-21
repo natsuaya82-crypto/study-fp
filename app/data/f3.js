@@ -16,6 +16,45 @@ topics:[
  {t:'ex',q:'完全失業率は景気動向指数のどの系列？',a:'遅行系列。景気の谷を過ぎてから改善するため。有効求人倍率は一致系列なので混同注意。'},
  {t:'key',x:['<b>新規</b>求人数＝先行、<b>有効</b>求人倍率＝一致、<b>完全失業率</b>＝遅行（この3点セットで覚える）','GDPで最大の項目は<b>民間最終消費支出</b>（5〜6割）','CPIは総務省・消費税込み、企業物価指数は日銀','買いオペ＝資金供給＝金利低下']}
 ]},
+{id:'f3-01b', title:'景気・物価・金利と金融市場', tags:['頻出'], blocks:[
+ {t:'p',x:'指標の名前を覚えたら、次は<b>つながり</b>です。3級では「景気がよくなると金利はどうなる？」「円安はどんなときに進む？」という<u>向きを問う問題</u>がよく出ます。数字は要りません。<b>矢印の向きだけ</b>正確に入れてください。'},
+ {t:'ul',x:[
+  '<b>景気と株価</b>：好況が予想されると企業の収益が伸びると見込まれ、<u>株価は上がる</u>。景気の悪化が予想されると<u>株価は下がる</u>。株価は景気に<b>先回りして動く</b>（だから東証株価指数は景気動向指数の<b>先行</b>系列）。',
+  '<b>インフレ</b>：物価が続けて上がっている状態。物価が上がるということは、同じ1万円で買えるモノが減るということなので、<u>お金の価値は下がる</u>。',
+  '<b>デフレ</b>：物価が続けて下がっている状態。同じ1万円で買えるモノが増えるので、<u>お金の価値は上がる</u>。',
+  '<b>物価と金利</b>：インフレになると、お金を貸す側は目減りする分を上乗せしたくなるので<u>金利は上がる</u>。デフレなら<u>金利は下がる</u>。',
+  '<b>景気と金利</b>：好況ではお金を借りたい企業が増える（資金需要が増える）ので<u>金利は上がる</u>。不況なら<u>金利は下がる</u>。',
+  '<b>海外金利と為替</b>：米国の金利が上がって<b>日米の金利差が広がる</b>と、金利の高いドルを買い、金利の低い円を売る動きが出るので、一般に<u>米ドル高・円安</u>に振れる。'
+ ]},
+ {t:'fig', cap:'「景気↑→金利↑→（金利が上がると債券価格は下がる）」まで一本につながります。物価も同じ向きです。逆に不況なら全部逆向き。矢印を1本ずつ口に出して確認してください。', svg:'<svg viewBox="0 0 520 250" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif"><g font-size="13"><rect x="14" y="14" width="106" height="46" rx="9" class="ac-f" opacity=".14"/><text x="67" y="35" text-anchor="middle" font-weight="700" fill="currentColor">景気が良い</text><text x="67" y="51" text-anchor="middle" font-size="11" fill="currentColor" opacity=".75">好況</text><rect x="14" y="98" width="106" height="46" rx="9" class="ac-f" opacity=".14"/><text x="67" y="119" text-anchor="middle" font-weight="700" fill="currentColor">物価が上がる</text><text x="67" y="135" text-anchor="middle" font-size="11" fill="currentColor" opacity=".75">インフレ</text><rect x="200" y="56" width="106" height="46" rx="9" class="mk-f" opacity=".3"/><text x="253" y="85" text-anchor="middle" font-weight="700" fill="currentColor">金利が上がる</text><rect x="200" y="150" width="106" height="46" rx="9" class="ac-f" opacity=".14"/><text x="253" y="171" text-anchor="middle" font-weight="700" fill="currentColor">株価が上がる</text><text x="253" y="187" text-anchor="middle" font-size="11" fill="currentColor" opacity=".75">収益が伸びる見込み</text><rect x="386" y="56" width="120" height="46" rx="9" class="ng-f" opacity=".16"/><text x="446" y="78" text-anchor="middle" font-weight="700" fill="currentColor">債券価格は下がる</text><text x="446" y="94" text-anchor="middle" font-size="11" fill="currentColor" opacity=".75">利回りは上がる</text><rect x="386" y="150" width="120" height="46" rx="9" class="ac-f" opacity=".14"/><text x="446" y="172" text-anchor="middle" font-weight="700" fill="currentColor">お金の価値は下がる</text><text x="446" y="188" text-anchor="middle" font-size="11" fill="currentColor" opacity=".75">インフレのとき</text></g><g class="ac-s" fill="none" stroke-width="2" marker-end="url(#a3)"><path d="M120 37 L196 68"/><path d="M120 121 L196 90"/><path d="M120 46 L196 166"/><path d="M306 79 L382 79"/><path d="M120 130 L382 172" opacity=".55" stroke-dasharray="4 3"/></g><defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" class="ac-f"/></marker></defs></svg>'},
+ {t:'warn',x:'<b>金利と債券価格は必ず逆</b>です。金利が上がる＝新しく出る債券のほうが条件がいい＝すでにある債券は値下がりする。ここは分野3でいちばん問われます。'},
+ {t:'p',x:'次に、その金利がどこで決まるのか。お金を貸し借りする場を<b>金融市場</b>といいます。取引の期間が<b>1年未満なら短期金融市場、1年以上なら長期金融市場</b>です。'},
+ {t:'fig', cap:'短期は2つに分かれます。インターバンク市場は金融機関だけ、オープン市場は一般企業も入れます。「インターバンク＝銀行どうし」と読めば迷いません。個人が直接参加できる市場はここにはありません。', svg:'<svg viewBox="0 0 520 260" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif"><g font-size="13"><rect x="196" y="10" width="128" height="40" rx="9" class="ac-f" opacity=".2"/><text x="260" y="35" text-anchor="middle" font-weight="700" fill="currentColor">金融市場</text><rect x="20" y="88" width="200" height="40" rx="9" class="fc-f" opacity=".18"/><text x="120" y="106" text-anchor="middle" font-weight="700" fill="currentColor">短期金融市場</text><text x="120" y="121" text-anchor="middle" font-size="11" fill="currentColor" opacity=".75">取引期間 1年未満</text><rect x="300" y="88" width="200" height="40" rx="9" class="fc-f" opacity=".18"/><text x="400" y="106" text-anchor="middle" font-weight="700" fill="currentColor">長期金融市場</text><text x="400" y="121" text-anchor="middle" font-size="11" fill="currentColor" opacity=".75">取引期間 1年以上</text><rect x="14" y="166" width="96" height="52" rx="8" class="mk-f" opacity=".3"/><text x="62" y="186" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">インター</text><text x="62" y="200" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">バンク市場</text><text x="62" y="236" text-anchor="middle" font-size="11" fill="currentColor" opacity=".8">金融機関のみ</text><rect x="126" y="166" width="96" height="52" rx="8" class="ac-f" opacity=".16"/><text x="174" y="193" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">オープン市場</text><text x="174" y="230" text-anchor="middle" font-size="11" fill="currentColor" opacity=".8">一般企業も</text><text x="174" y="244" text-anchor="middle" font-size="11" fill="currentColor" opacity=".8">参加できる</text><rect x="306" y="166" width="88" height="52" rx="8" class="ac-f" opacity=".16"/><text x="350" y="196" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">株式市場</text><rect x="408" y="166" width="88" height="52" rx="8" class="ac-f" opacity=".16"/><text x="452" y="196" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">債券市場</text></g><g class="ac-s" fill="none" stroke-width="1.6"><path d="M260 50 L260 68 M120 68 L400 68 M120 68 L120 86 M400 68 L400 86"/><path d="M120 128 L120 146 M62 146 L174 146 M62 146 L62 164 M174 146 L174 164"/><path d="M400 128 L400 146 M350 146 L452 146 M350 146 L350 164 M452 146 L452 164"/></g></svg>'},
+ {t:'ul',x:[
+  '<b>インターバンク市場</b>：金融機関<u>だけ</u>が参加できる。代表がコール市場で、そこでの金利が<b>無担保コール翌日物レート</b>。日銀の金融政策の目安になります。',
+  '<b>オープン市場</b>：金融機関に加えて<u>一般企業も参加できる</u>。CD（譲渡性預金）市場など。',
+  '<b>長期金融市場（証券市場）</b>：株式市場と債券市場。',
+  '<b>個人</b>は金融市場に直接参加して取引することは<u>できません</u>。銀行や証券会社を通すことになります。'
+ ]},
+ {t:'p',x:'最後に<b>日本銀行の金融政策</b>。中心は<b>公開市場操作（オペレーション）</b>です。'},
+ {t:'cmp',a:{t:'買いオペ（金融緩和）',x:[
+   '日銀が金融機関から<b>国債などを買う</b>','代金が出ていくので市中のお金は<b>増える</b>',
+   'お金が余るので金利は<b>下がる</b>','不況・デフレのときに行う']},
+  b:{t:'売りオペ（金融引締め）',x:[
+   '日銀が金融機関に<b>国債などを売る</b>','代金を吸い上げるので市中のお金は<b>減る</b>',
+   'お金が足りなくなり金利は<b>上がる</b>','景気の過熱・インフレのときに行う']}},
+ {t:'ex',q:'日銀が買いオペを行うと、市中の金利はどうなりますか。',a:'<b>下がります</b>。日銀が国債を買う→その代金が金融機関に渡る→世の中に出回るお金が増える→お金が余るので借りる側が有利になり金利が下がる、という順番です。「<u>買う＝お金を出す＝ゆるめる</u>」と覚えると、売りオペも自動的に逆だと分かります。'},
+ {t:'ex',q:'米国の金利が上昇し、日米の金利差が拡大した。為替は一般にどちらへ動きますか。',a:'<b>米ドル高・円安</b>。金利の高いほうの通貨（米ドル）が買われ、低いほう（円）が売られるためです。「<u>金利が高い通貨が買われる</u>」の一本で、どの組み合わせでも答えられます。'},
+ {t:'key',x:[
+  '好況→金利↑／不況→金利↓。インフレ→金利↑／デフレ→金利↓',
+  'インフレ＝お金の価値が<b>下がる</b>。デフレ＝お金の価値が<b>上がる</b>',
+  '<b>金利と債券価格は必ず逆</b>',
+  '短期＝1年未満（インターバンク＝金融機関のみ／オープン＝一般企業も可）、長期＝1年以上（株式・債券）',
+  '個人は金融市場に直接参加できない',
+  '買いオペ＝資金供給＝金利↓、売りオペ＝資金吸収＝金利↑',
+  '金利が高い通貨が買われる（日米金利差の拡大→円安）'
+ ]}
+]},
 {id:'f3-02', title:'預貯金とセーフティネット', tags:[], blocks:[
  {t:'ul',x:[
   '<b>預金保険制度</b>：1金融機関ごとに預金者1人あたり<u>元本1,000万円までとその利息</u>を保護。',
