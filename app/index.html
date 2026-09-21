@@ -118,6 +118,7 @@ main{max-width:720px; margin:0 auto; padding:16px 16px 104px}
 .chip.tag{background:var(--sunk); color:var(--ink-2)}
 .chip.hot{background:var(--bad-soft); color:var(--bad)}
 .chip.law{background:var(--warn-soft); color:var(--warn)}
+.chip.calc{background:var(--f4); color:#fff}
 .bar{height:6px; border-radius:99px; background:var(--sunk); overflow:hidden}
 .bar i{display:block; height:100%; border-radius:99px; background:var(--accent)}
 
@@ -261,18 +262,19 @@ figure.fig figcaption{
   background:var(--card); border-radius:99px; padding:2px 9px;
   font-family:"IBM Plex Mono",ui-monospace,monospace}
 .qtime.slow{color:var(--bad)}
-.rank{display:flex; align-items:center; gap:9px; padding:9px 0; border-top:1px solid var(--line)}
+.rank{display:flex; align-items:stretch; gap:10px; padding:11px 0; border-top:1px solid var(--line)}
 .rank:first-of-type{border-top:0}
-.rank .pos{flex:none; width:20px; font-size:12px; font-weight:700; color:var(--ink-3); text-align:right;
-  font-family:"IBM Plex Mono",ui-monospace,monospace}
-.rank .gr{flex:none; width:24px; height:24px; border-radius:7px; display:grid; place-items:center;
-  font-size:12px; font-weight:700; color:#fff}
+.rank .pos{flex:none; width:16px; font-size:11.5px; font-weight:700; color:var(--ink-3); text-align:right;
+  font-family:"IBM Plex Mono",ui-monospace,monospace; padding-top:2px}
+.rank .lead{flex:none; width:5px; border-radius:99px}
 .rank .nm{flex:1; min-width:0}
-.rank .nm b{display:block; font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.rank .nm small{display:block; font-size:11px; color:var(--ink-3); margin-top:1px;
+.rank .nm .top{display:flex; align-items:baseline; gap:8px}
+.rank .nm b{flex:1; min-width:0; font-size:13.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.rank .nm .sc{flex:none; font-size:16px; font-weight:700; font-family:"IBM Plex Mono",ui-monospace,monospace}
+.rank .nm .gr{flex:none; font-size:10.5px; font-weight:700; padding:1px 6px; border-radius:99px; color:#fff}
+.rank .nm small{display:block; font-size:11px; color:var(--ink-3); margin-top:2px;
   font-family:"IBM Plex Mono",ui-monospace,monospace}
-.rank .sc{flex:none; min-width:42px; text-align:right; font-size:15px; font-weight:700;
-  font-family:"IBM Plex Mono",ui-monospace,monospace}
+.rank .nm .bar{display:block; margin-top:7px; height:6px}
 .pacebar{display:flex; gap:1px; background:var(--line); border-radius:var(--r-s); overflow:hidden; margin-top:12px}
 .pacebar div{flex:1; background:var(--card); padding:9px 4px; text-align:center}
 .pacebar b{display:block; font-size:16px; font-weight:600; font-family:"IBM Plex Mono",ui-monospace,monospace}
@@ -312,9 +314,10 @@ figure.fig figcaption{
 .verdict .v{font-weight:700; margin-bottom:5px; display:flex; align-items:center; gap:6px}
 .verdict.ok .v{color:var(--good)}
 .verdict.ng .v{color:var(--bad)}
-.verdict .lnk{margin-top:9px}
-.verdict .lnk button{background:none; border:0; padding:0; font-size:12.5px; font-weight:700; color:var(--accent-ink); text-decoration:underline}
-.sticky-act{position:sticky; bottom:calc(76px + env(safe-area-inset-bottom,0px)); margin-top:16px}
+.verdict .lnk{margin-top:11px; display:flex; flex-wrap:wrap; gap:8px}
+.verdict .lnk button{background:var(--card); border:1px solid var(--line-2); border-radius:8px;
+  padding:7px 11px; font-size:12.5px; font-weight:700; color:var(--accent-ink); text-align:left}
+.sticky-act{position:sticky; bottom:calc(76px + env(safe-area-inset-bottom,0px)); margin-top:34px}
 
 /* ---- result ---- */
 .score{text-align:center; padding:8px 0 4px}
@@ -569,6 +572,7 @@ mark.hl{
 <script src="data/q6b.js"></script>
 <script src="data/q8.js"></script>
 <script src="data/q9.js"></script>
+<script src="data/q10.js"></script>
 <script src="data/j1.js"></script>
 <script src="data/j2.js"></script>
 <script src="data/j3.js"></script>
@@ -592,13 +596,22 @@ function rebuildPools(){
   FIELDS.forEach(function(f){ QBY.g[f] = []; QBY.j[f] = []; });
   QS.forEach(function(q){ var e = exOf(q); if(QBY[e][q.f]) QBY[e][q.f].push(q); });
 }
+/* calcMode: 'all' 全部 ／ 'skip' 計算を出さない ／ 'only' 計算だけ */
+var calcMode = 'all';
+try{ var cm0 = localStorage.getItem('fp3-drill-v1-calc');
+  if(cm0==='skip'||cm0==='only') calcMode = cm0; }catch(e){}
+function calcFit(q){
+  if(calcMode === 'skip') return !q.calc;
+  if(calcMode === 'only') return !!q.calc;
+  return true;
+}
 function pool(scope){
   scope = scope || examScope;
   var out = [];
   FIELDS.forEach(function(f){ out = out.concat(QBY[scope][f] || []); });
-  return out;
+  return out.filter(calcFit);
 }
-function poolBy(f, scope){ return (QBY[scope || examScope][f]) || []; }
+function poolBy(f, scope){ return ((QBY[scope || examScope][f]) || []).filter(calcFit); }
 function scopeName(){ return EXAMS[examScope].name; }
 var QMAP = {}; QS.forEach(function(q){ QMAP[q.id]=q; });
 var TMAP = {}; FIELDS.forEach(function(f){ if(TB[f]) TB[f].topics.forEach(function(t){ TMAP[t.id]={t:t,f:f}; }); });
@@ -978,7 +991,8 @@ function renderBook(){
       var isRead = !!S.read[t.id];
       h += '<button class="btn '+(isRead?'ghost':'primary')+'" style="margin-top:6px" data-act="read:'+t.id+'">'+
            (isRead ? '✓ 読了済み（取り消す）' : 'この章を読んだ') + '</button>';
-      var qs = QS.filter(function(q){ return q.t===t.id; });
+      var qs = QS.filter(function(q){ return q.t===t.id && calcFit(q); });
+      if(!qs.length) qs = QS.filter(function(q){ return q.t===t.id; });
       if(qs.length) h += '<button class="btn" style="margin-top:8px" data-act="topicquiz:'+t.id+'">この章の問題を解く（'+qs.length+'問）</button>';
       if(sampleFn) h += '<button class="btn" style="margin-top:8px" data-act="askt:'+t.id+'">この章について質問する</button>';
       h += '</div>';
@@ -1237,8 +1251,20 @@ function renderDrill(){
   h += '<div class="seg">'+
     '<button data-act="scope:g" aria-pressed="'+(examScope==="g")+'">学科</button>'+
     '<button data-act="scope:j" aria-pressed="'+(examScope==="j")+'">実技</button></div>';
-  h += '<p class="tiny muted" style="margin:0 0 12px">'+esc(scopeName())+' '+pool().length+
-       '問。解いた結果は自動で記録され、推移は「記録と弱点」で見られます。</p>';
+  var nCalc = (QBY[examScope] ? FIELDS.reduce(function(n,f){
+    return n + (QBY[examScope][f]||[]).filter(function(q){ return q.calc; }).length; }, 0) : 0);
+  h += '<p class="tiny muted" style="margin:0 0 10px">'+esc(scopeName())+' '+pool().length+
+       '問。解いた結果は自動で記録されます。</p>';
+  h += '<div class="card" style="padding:12px 14px;margin-bottom:12px">'+
+    '<p class="eyebrow" style="margin-bottom:8px">計算問題（'+nCalc+'問）</p>'+
+    '<div class="seg" style="margin:0">'+
+    '<button data-act="cm:all" aria-pressed="'+(calcMode==='all')+'">ぜんぶ</button>'+
+    '<button data-act="cm:skip" aria-pressed="'+(calcMode==='skip')+'">出さない</button>'+
+    '<button data-act="cm:only" aria-pressed="'+(calcMode==='only')+'">計算だけ</button></div>'+
+    '<p class="tiny muted" style="margin:8px 0 0">'+
+    (calcMode==='skip' ? '電卓なしで解ける問題だけ出します。寝ながら回すとき用。'
+     : calcMode==='only' ? '電卓を用意して、計算だけを集中して潰すとき用。'
+     : '本番と同じ構成。電卓が使える場所で。')+'</p></div>';
 
   h += '<div class="card"><p class="eyebrow">確認テスト</p>';
   h += '<div class="todo"><span class="t"><b>復習テスト</b><small>'+
@@ -1571,17 +1597,15 @@ function renderRank(){
   h += '<div class="seg">'+
     '<button data-act="scope:g" aria-pressed="'+(examScope==="g")+'">学科</button>'+
     '<button data-act="scope:j" aria-pressed="'+(examScope==="j")+'">実技</button></div>';
-  h += '<div class="card"><p class="eyebrow">'+esc(scopeName())+'　'+
-    (examScope==='j'?'本番は20問60分＝1問180秒':'本番は60問60分＝1問60秒')+
-    '　→ そのペースで全問正解が100</p>';
-  h += '<div class="fchips" style="--cc:var(--accent)">'+
+  h += '<div class="card"><p class="eyebrow">'+esc(scopeName())+'　100＝本番ペースで全問正解</p>';
+  h += '<div class="seg" style="margin-bottom:8px">'+
     '<button data-act="ru:topic" aria-pressed="'+(rankUnit==='topic')+'">単元別</button>'+
-    '<button data-act="ru:field" aria-pressed="'+(rankUnit==='field')+'">分野別</button>'+
-    '<span style="flex:none;width:8px"></span>'+
-    '<button data-act="rb:score" aria-pressed="'+(rankBy==='score')+'">総合</button>'+
+    '<button data-act="ru:field" aria-pressed="'+(rankUnit==='field')+'">分野別</button></div>';
+  h += '<div class="fchips" style="--cc:var(--accent)">'+
+    '<button data-act="rb:score" aria-pressed="'+(rankBy==='score')+'">強い順</button>'+
+    '<button data-act="rb:weak" aria-pressed="'+(rankBy==='weak')+'">弱い順</button>'+
     '<button data-act="rb:acc" aria-pressed="'+(rankBy==='acc')+'">正答率</button>'+
-    '<button data-act="rb:sec" aria-pressed="'+(rankBy==='sec')+'">速さ</button>'+
-    '<button data-act="rb:weak" aria-pressed="'+(rankBy==='weak')+'">弱い順</button></div>';
+    '<button data-act="rb:sec" aria-pressed="'+(rankBy==='sec')+'">速さ</button></div>';
   if(!rows.length){
     h += '<div class="empty">3問以上解いた'+(rankUnit==='topic'?'単元':'分野')+
       'から並びます。<br>まずは解いてみてください。</div></div>';
@@ -1597,28 +1621,22 @@ function renderRank(){
     if(rankBy === 'weak') return (a.score===null?999:a.score)-(b.score===null?999:b.score);
     return (b.score||0)-(a.score||0);
   });
+  var top = Math.max.apply(null, rows.map(function(r){ return r.score || 0; })) || 1;
   rows.forEach(function(r, i){
     var gr = gradeOf(r.score);
+    var w = r.score === null ? 0 : Math.max(3, Math.round(r.score/top*100));
     h += '<div class="rank"><span class="pos">'+(i+1)+'</span>'+
+      '<span class="lead" style="background:'+r.color+'"></span>'+
+      '<span class="nm"><span class="top"><b>'+esc(r.name)+'</b>'+
       '<span class="gr" style="background:'+(r.score===null?'var(--line-2)':gr.c)+'">'+gr.g+'</span>'+
-      '<span class="nm"><b>'+esc(r.name)+'</b><small>'+
-      (r.sub?esc(r.sub)+'　':'')+r.done+'/'+r.qs.length+'問　'+
-      (r.acc===null?'—':r.acc+'%')+'　'+fmtSec(r.sec)+'/問</small></span>'+
-      '<span class="sc" style="color:'+gr.c+'">'+(r.score===null?'—':r.score)+'</span></div>';
+      '<span class="sc" style="color:'+r.color+'">'+(r.score===null?'—':r.score)+'</span></span>'+
+      '<small>'+(r.sub?esc(r.sub)+'　':'')+r.done+'/'+r.qs.length+'問　'+
+      (r.acc===null?'—':r.acc+'%')+'　'+fmtSec(r.sec)+'/問</small>'+
+      '<span class="bar"><i style="width:'+w+'%;background:'+r.color+'"></i></span>'+
+      '</span></div>';
   });
-  h += '<p class="tiny muted" style="margin:10px 0 0">スコア＝<b>正答率×速度点÷100</b>。'+
-    '速度点は本番ペース（1問'+EXAMS[examScope].sec+'秒）で100で、'+
-    '<b>速いほど上限なく伸びます</b>。100を超えたら本番より速いということ。'+
-    '<br>D 60未満／C 60／B 100／A 170／S 250〜</p>';
-  var last = rows[rows.length-1];
-  if(rankBy !== 'sec' && last && last.score !== null){
-    h += '<p class="tiny muted" style="margin:10px 0 0">いちばん下は<b>'+esc(last.name)+'</b>（'+
-      last.acc+'%・'+fmtSec(last.sec)+'/問）。ここから潰すと伸びます。</p>';
-  }
-  var slow = rows.filter(function(r){ return r.sec !== null; })
-    .sort(function(a,b){ return b.sec-a.sec; })[0];
-  if(slow) h += '<p class="tiny muted" style="margin:6px 0 0">いちばん時間を食っているのは<b>'+
-    esc(slow.name)+'</b>（'+fmtSec(slow.sec)+'/問）。本番の目安は1問'+EXAMS[examScope].sec+'秒。</p>';
+  h += '<p class="tiny muted" style="margin:12px 0 0">スコア＝正答率×速さ。'+
+    'S 250／A 170／B 100／C 60</p>';
   h += '</div>';
   var lows = rows.slice().sort(function(a,b){
     return (a.score===null?999:a.score)-(b.score===null?999:b.score); }).slice(0,3);
@@ -2012,6 +2030,7 @@ function renderQuiz(){
        '<span class="clock num" id="clock" title="この問題にかかっている時間">0:00</span></div>';
   h += '<div class="card">';
   h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">'+fieldChip(q.f)+
+       (q.calc?'<span class="chip calc">計算</span>':'')+
        '<span class="tiny muted" style="font-size:11px;flex:1;min-width:0">'+esc(quiz.label)+'</span>'+
        starBtn(q.id)+'</div>';
   if(q.ctx) h += '<div class="qctx">'+q.ctx+'</div>';
@@ -2078,9 +2097,11 @@ function pick(i){
        (over ? '<span class="qtime slow" title="長く中断したため時間は記録されません">中断・計測外</span>'
              : '<span class="qtime'+(tsec > tgt ? ' slow':'')+'">'+fmtSec(tsec)+'</span>')+'</div>';
   h += '<div>'+rich(q.e)+'</div>';
-  if(info) h += '<div class="lnk"><button data-act="topic:'+q.t+'">→ 教科書：'+esc(info.t.title)+'</button></div>';
+  h += '<div class="lnk">';
+  if(info) h += '<button data-act="topic:'+q.t+'">→ 教科書：'+esc(info.t.title)+'</button>';
+  if(sampleFn) h += '<button data-act="askq:'+q.id+'">？ この問題を質問する</button>';
   h += '</div>';
-  if(sampleFn) h += '<button class="askbtn" data-act="askq:'+q.id+'">この問題について質問する</button>';
+  h += '</div>';
   h += '<button class="btn primary sticky-act" id="nextBtn">'+
        (quiz.i+1 >= quiz.list.length ? '結果を見る' : '次の問題へ')+'</button>';
   var fb = document.getElementById('fb');
@@ -2234,6 +2255,14 @@ document.addEventListener('click', function(ev){
     startQuiz(qs, (TB[v] ? TB[v].short : '分野別') + ' ' + qs.length + '問',
               'drill', {kind:'field', f:v, ex:examScope}); return;
   }
+  if(k==='cm'){
+    if(v!==calcMode){
+      calcMode = v;
+      try{ localStorage.setItem(LS+'-calc', v); }catch(e){}
+      render();
+    }
+    return;
+  }
   if(k==='scope'){
     if(v!==examScope){
       examScope = v;
@@ -2244,7 +2273,8 @@ document.addEventListener('click', function(ev){
     return;
   }
   if(k==='topicquiz'){
-    var tq = shuffle(QS.filter(function(q){return q.t===v}));
+    var tq = shuffle(QS.filter(function(q){return q.t===v && calcFit(q)}));
+    if(!tq.length) tq = shuffle(QS.filter(function(q){return q.t===v}));
     var inf = TMAP[v];
     startQuiz(tq, inf ? inf.t.title : '章別', 'book', {kind:'topic', f:(inf?inf.f:null), ex:'g'}); return;
   }
