@@ -303,6 +303,12 @@ figure.fig figcaption{
 .chartwrap .ln{fill:none; stroke:var(--cc,var(--accent)); stroke-width:2; stroke-linejoin:round; stroke-linecap:round}
 .chartwrap .pt{fill:var(--card); stroke:var(--cc,var(--accent)); stroke-width:2}
 .chartwrap .pt.last{fill:var(--cc,var(--accent))}
+.chartwrap .raw{fill:var(--cc,var(--accent)); opacity:.3}
+.legend{display:flex; gap:14px; flex-wrap:wrap; margin-top:8px; font-size:11.5px; color:var(--ink-2)}
+.legend span{display:inline-flex; align-items:center; gap:5px}
+.legend i{display:inline-block; flex:none}
+.legend .k-ln{width:16px; height:2px; background:var(--cc,var(--accent)); border-radius:2px}
+.legend .k-raw{width:7px; height:7px; border-radius:50%; background:var(--cc,var(--accent)); opacity:.3}
 .chartwrap .hit{fill:transparent; cursor:pointer}
 .chartwrap text{fill:var(--ink-3); font-size:9px}
 .chartwrap text.val{fill:var(--ink); font-size:10px; font-weight:700}
@@ -491,7 +497,15 @@ mark.hl{
 <script src="data/q5.js"></script>
 <script src="data/q6.js"></script>
 <script src="data/q7.js"></script>
+<script src="data/q1b.js"></script>
+<script src="data/q2b.js"></script>
+<script src="data/q3b.js"></script>
+<script src="data/q4b.js"></script>
+<script src="data/q5b.js"></script>
+<script src="data/q6b.js"></script>
 <script src="data/j1.js"></script>
+<script src="data/j2.js"></script>
+<script src="data/j3.js"></script>
 <script>
 (function(){
 "use strict";
@@ -1175,15 +1189,26 @@ function renderChart(){
   g += '<line class="pass" x1="'+L+'" y1="'+Y(60)+'" x2="'+(W-R)+'" y2="'+Y(60)+'"/>';
   g += '<text x="'+(W-R+3)+'" y="'+(Y(60)+3)+'" text-anchor="start">合格</text>';
 
-  if(n > 1){
-    g += '<polyline class="ln" points="'+pct.map(function(v,i){ return X(i)+','+Y(v); }).join(' ')+'"/>';
+  // 全体は累積平均を主役の線に、各回の素点は薄い点で添える
+  var avgSeries = [];
+  var run = 0;
+  pct.forEach(function(v,i){ run += v; avgSeries.push(run/(i+1)); });
+  var main = chartField ? pct : avgSeries;
+
+  if(!chartField){
+    pct.forEach(function(v,i){
+      g += '<circle class="raw" cx="'+X(i)+'" cy="'+Y(v)+'" r="3"/>';
+    });
   }
-  pct.forEach(function(v,i){
+  if(n > 1){
+    g += '<polyline class="ln" points="'+main.map(function(v,i){ return X(i)+','+Y(v); }).join(' ')+'"/>';
+  }
+  main.forEach(function(v,i){
     var last = i === n-1;
     g += '<circle class="pt'+(last?' last':'')+'" cx="'+X(i)+'" cy="'+Y(v)+'" r="'+(last?4.5:3.5)+'"/>';
     g += '<circle class="hit" cx="'+X(i)+'" cy="'+Y(v)+'" r="16" data-pt="'+i+'"/>';
   });
-  var lv = pct[n-1];
+  var lv = Math.round(main[n-1]);
   g += '<text class="val" x="'+(X(n-1)+8)+'" y="'+(Y(lv)+(lv>85?12:-7))+'" text-anchor="'+(n===1?'middle':'end')+'">'+lv+'%</text>';
   var d0 = new Date(data[0].at), d1 = new Date(data[n-1].at);
   g += '<text x="'+L+'" y="'+(H-10)+'" text-anchor="start">'+(d0.getMonth()+1)+'/'+d0.getDate()+'</text>';
@@ -1192,16 +1217,24 @@ function renderChart(){
 
   h += '<div class="chartwrap" id="chartwrap" style="--cc:'+cc+'">'+g+'<div id="tip" hidden></div></div>';
 
+  if(!chartField){
+    h += '<div class="legend">'+
+      '<span><i class="k-ln"></i>全体の平均（累計）</span>'+
+      '<span><i class="k-raw"></i>各回の点数</span></div>';
+  }
+
   var sum = pct.reduce(function(a,b){return a+b;},0);
   var avg = Math.round(sum/n), best = Math.max.apply(null,pct);
-  var delta = n>1 ? pct[n-1]-pct[n-2] : null;
+  var delta = n>1 ? Math.round(main[n-1]) - Math.round(main[n-2]) : null;
   h += '<div class="statrow">';
-  h += '<div><b class="num">'+pct[n-1]+'%</b><small>直近</small></div>';
-  h += '<div><b class="num">'+avg+'%</b><small>平均</small></div>';
+  h += '<div><b class="num">'+avg+'%</b><small>全体の平均</small></div>';
+  h += '<div><b class="num">'+pct[n-1]+'%</b><small>直近の点</small></div>';
   h += '<div><b class="num">'+best+'%</b><small>最高</small></div>';
-  h += '<div><b class="num">'+(delta===null?'—':(delta>0?'+':'')+delta)+'</b><small>前回比</small></div>';
+  h += '<div><b class="num">'+(delta===null?'—':(delta>0?'+':'')+delta)+'</b><small>平均の増減</small></div>';
   h += '</div>';
-  h += '<p class="tiny muted" style="margin:9px 0 0">'+n+'回ぶんの記録。点をタップすると日付と点数が出ます。破線は合格ライン（6割）。</p>';
+  h += '<p class="tiny muted" style="margin:9px 0 0">'+
+    (chartField ? '各回の点数をそのまま並べています。' : '太い線はそこまでの平均、薄い点は各回の点数です。')+
+    '点をタップすると日付と内訳が出ます。破線は合格ライン（6割）。</p>';
   return h;
 }
 
@@ -1214,7 +1247,10 @@ function showTip(i){
   var hr = hit.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
   var dt = new Date(d.at);
   tip.className = 'tip';
-  tip.innerHTML = '<b>'+d.correct+' / '+d.total+'　'+Math.round(d.correct/d.total*100)+'%</b>'+
+  var upto = data.slice(0, i+1);
+  var runAvg = Math.round(upto.reduce(function(a,x){ return a + x.correct/x.total*100; }, 0) / upto.length);
+  tip.innerHTML = '<b>'+d.correct+' / '+d.total+'　'+Math.round(d.correct/d.total*100)+'%'+
+    (chartField ? '' : '　(平均 '+runAvg+'%)')+'</b>'+
     '<small>'+(dt.getMonth()+1)+'/'+dt.getDate()+' '+String(dt.getHours()).padStart(2,'0')+':'+
     String(dt.getMinutes()).padStart(2,'0')+'　'+esc(d.label||'')+'</small>';
   tip.style.left = (hr.left - wr.left + hr.width/2) + 'px';
