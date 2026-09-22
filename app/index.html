@@ -300,9 +300,11 @@ figure.fig figcaption{
   border-radius:11px; padding:13px 14px; margin-top:9px; font-size:14.5px; line-height:1.6;
   display:flex; gap:10px; align-items:flex-start;
 }
+.opt{min-height:56px; align-items:center}
+.opt > *{pointer-events:none}
 .opt .mk{
-  flex:none; width:23px; height:23px; border-radius:50%; border:1.5px solid var(--line-2);
-  display:grid; place-items:center; font-size:12px; font-weight:700; color:var(--ink-2); margin-top:1px;
+  flex:none; width:26px; height:26px; border-radius:50%; border:1.5px solid var(--line-2);
+  display:grid; place-items:center; font-size:12.5px; font-weight:700; color:var(--ink-2);
 }
 .opt.ok{border-color:var(--good); background:var(--good-soft)}
 .opt.ok .mk{border-color:var(--good); background:var(--good); color:#fff}
@@ -2071,6 +2073,9 @@ function resumeQuiz(){
 function renderQuiz(){
   if(!quiz) return;
   if(quiz.i >= quiz.list.length) return renderResult();
+  /* ここを通るのは必ず未解答の問題。解答済みフラグが立ったままだと
+     選択肢を押しても無視されるので、描くたびに必ず落とす */
+  quiz.answeredNow = false;
   var q = quiz.list[quiz.i];
   var opts = q.type==='ox' ? ['○（正しい）','×（誤り）'] : q.c;
   var h = '';
@@ -2159,7 +2164,7 @@ function pick(i){
   var nb = document.getElementById('nextBtn');
   nb.addEventListener('click', function(){ quiz.i++; quiz.answeredNow=false; saveQuiz(); renderQuiz(); window.scrollTo(0,0); });
   nb.focus({preventScroll:true});
-  fb.scrollIntoView({behavior:'smooth', block:'nearest'});
+  fb.scrollIntoView({block:'nearest'});
 }
 function renderResult(){
   var pct = Math.round(quiz.correct/quiz.list.length*100);
@@ -2437,6 +2442,42 @@ document.addEventListener('click', function(ev){
 });
 
 /* ---------- selection ---------- */
+/* 選択肢は click のほかに touch でも拾う。
+   iframe の中や webview では、指がわずかに動いただけで click が発火しないことがある。
+   ただし、スクロールしようとして指を離したときに誤答にならないよう、
+   指がほとんど動いていないときだけ解答として扱う */
+var lastPick = 0, touchStart = null;
+document.addEventListener('touchstart', function(ev){
+  var b = (ev.target && ev.target.closest) ? ev.target.closest('[data-pick]') : null;
+  if(!b || b.disabled || !ev.touches || !ev.touches[0]){ touchStart = null; return; }
+  touchStart = { x:ev.touches[0].clientX, y:ev.touches[0].clientY, at:Date.now(), el:b };
+}, {passive:true});
+document.addEventListener('touchmove', function(ev){
+  if(!touchStart || !ev.touches || !ev.touches[0]) return;
+  var dx = ev.touches[0].clientX - touchStart.x, dy = ev.touches[0].clientY - touchStart.y;
+  if(dx*dx + dy*dy > 144) touchStart = null;   /* 12px 以上動いたらスクロール扱い */
+}, {passive:true});
+document.addEventListener('touchcancel', function(){ touchStart = null; }, {passive:true});
+document.addEventListener('touchend', function(ev){
+  var ts = touchStart; touchStart = null;
+  if(!ts || !quiz || quiz.answeredNow || cur !== 'quiz') return;
+  if(ts.el.disabled || !ts.el.isConnected) return;
+  if(Date.now() - ts.at > 900) return;          /* 長押しは選択の意図とみなさない */
+  var tt = ev.changedTouches && ev.changedTouches[0];
+  if(tt){
+    var dx2 = tt.clientX - ts.x, dy2 = tt.clientY - ts.y;
+    if(dx2*dx2 + dy2*dy2 > 144) return;
+  }
+  var now = Date.now();
+  if(now - lastPick < 400) return;
+  lastPick = now;
+  ev.preventDefault();
+  pick(Number(ts.el.dataset.pick));
+}, {passive:false});
+document.addEventListener('click', function(ev){
+  if(ev.target && ev.target.closest && ev.target.closest('[data-pick]')) lastPick = Date.now();
+}, true);
+
 var selTimer = null;
 function queueSelBar(){
   if(selTimer) clearTimeout(selTimer);
