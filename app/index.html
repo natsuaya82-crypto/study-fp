@@ -50,7 +50,14 @@ body{
 h1,h2,h3,.disp{font-family:"Zen Kaku Gothic New","Hiragino Sans",system-ui,sans-serif; text-wrap:balance}
 .num{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
 button{font:inherit; color:inherit; cursor:pointer;
-  -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; touch-action:manipulation}
+  -webkit-user-select:none; user-select:none; touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .06s ease, filter .06s ease, background .06s ease}
+/* 押したことが必ず目に見えるようにする。
+   tap-highlight を消しているぶん、自前で反応を返さないと
+   押せたのか押せていないのか分からなくなる */
+button:active{transform:scale(.97); filter:brightness(.94)}
+@media (prefers-reduced-motion:reduce){ button{transition:none} button:active{transform:none} }
 /* 教科書の本文だけは、なぞって線を引けるように選択を許す */
 .doc, .doc *{-webkit-user-select:text; user-select:text}
 .doc button, .tools button, #selbar button{-webkit-user-select:none; user-select:none}
@@ -302,6 +309,17 @@ figure.fig figcaption{
 }
 .opt{min-height:56px; align-items:center}
 .opt > *{pointer-events:none}
+.opt:active{transform:scale(.985); background:var(--accent-soft); border-color:var(--accent)}
+.opt:active .mk{border-color:var(--accent); color:var(--accent-ink)}
+/* 押した瞬間に残す波紋。指を離しても一瞬見えるので、
+   タップが届いたかどうかが確実に分かる */
+@keyframes tapped{
+  0%{box-shadow:0 0 0 0 var(--accent); transform:scale(.97)}
+  40%{box-shadow:0 0 0 8px var(--accent-soft); transform:scale(1)}
+  100%{box-shadow:0 0 0 16px transparent; transform:scale(1)}
+}
+.opt.tapped{animation:tapped .5s ease-out}
+@media (prefers-reduced-motion:reduce){ .opt.tapped{animation:none; box-shadow:0 0 0 3px var(--accent)} }
 .opt .mk{
   flex:none; width:26px; height:26px; border-radius:50%; border:1.5px solid var(--line-2);
   display:grid; place-items:center; font-size:12.5px; font-weight:700; color:var(--ink-2);
@@ -2447,9 +2465,17 @@ document.addEventListener('click', function(ev){
    ただし、スクロールしようとして指を離したときに誤答にならないよう、
    指がほとんど動いていないときだけ解答として扱う */
 var lastPick = 0, touchStart = null;
+function flashTap(el){
+  if(!el) return;
+  el.classList.remove('tapped');
+  void el.offsetWidth;
+  el.classList.add('tapped');
+  setTimeout(function(){ el.classList.remove('tapped'); }, 500);
+}
 document.addEventListener('touchstart', function(ev){
   var b = (ev.target && ev.target.closest) ? ev.target.closest('[data-pick]') : null;
   if(!b || b.disabled || !ev.touches || !ev.touches[0]){ touchStart = null; return; }
+  flashTap(b);
   touchStart = { x:ev.touches[0].clientX, y:ev.touches[0].clientY, at:Date.now(), el:b };
 }, {passive:true});
 document.addEventListener('touchmove', function(ev){
