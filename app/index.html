@@ -657,7 +657,17 @@ var sampleFn = null;
 function loadLocal(){
   try{ var raw = localStorage.getItem(LS); if(raw){ var o = JSON.parse(raw); if(o && typeof o==='object') merge(o); } }catch(e){}
 }
+/* 保存機能から返ってくるデータは読み取り専用（凍結）で来る。
+   そのまま S に入れると、あとで中身を書き換えるところで
+   「Attempted to assign to readonly property」で落ちる。
+   取り込む前に必ず複製する */
+function clone(x){
+  if(x === null || typeof x !== 'object') return x;
+  try{ return JSON.parse(JSON.stringify(x)); }catch(e){ return x; }
+}
 function merge(o){
+  if(!o || typeof o !== 'object') return;
+  o = clone(o);
   if(o.stats) for(var k in o.stats){ var a=S.stats[k], b=o.stats[k];
     if(!a || (b && (b.t||0) > (a.t||0))) S.stats[k]=b; }
   if(o.read) for(var k2 in o.read){ if(!S.read[k2] || o.read[k2] > S.read[k2]) S.read[k2]=o.read[k2]; }
@@ -764,16 +774,18 @@ function tally(list){
   return {n:n, c:c};
 }
 function record(id, correct, ms){
-  var st = S.stats[id] || {n:0,w:0,st:0,t:0};
-  st.n = (st.n||0)+1;
-  if(correct){ st.st = (st.st||0)+1; } else { st.w = (st.w||0)+1; st.st = 0; }
-  st.t = Date.now();
+  /* 既存の記録を書き換えるのではなく、新しい記録を作って置き換える。
+     取り込み元が読み取り専用でも落ちないようにするため */
+  var p = S.stats[id] || {};
+  var st = { n:(p.n||0)+1, w:(p.w||0), st:(p.st||0), t:Date.now(), ms:(p.ms||0), mn:(p.mn||0) };
+  if(correct) st.st = (p.st||0)+1; else { st.w = (p.w||0)+1; st.st = 0; }
   if(ms > 0){
     /* 解答にかかった時間の移動平均。mn は時間を測れた回数 */
-    var mn = (st.mn||0) + 1;
-    st.ms = st.ms ? Math.round((st.ms*(mn-1) + ms)/mn) : ms;
+    var mn = (p.mn||0) + 1;
+    st.ms = p.ms ? Math.round((p.ms*(mn-1) + ms)/mn) : ms;
     st.mn = mn;
   }
+  if(!st.ms){ delete st.ms; delete st.mn; }
   S.stats[id] = st;
   scheduleSave();
 }
@@ -2085,7 +2097,7 @@ function saveQuiz(){
   scheduleSave();
 }
 function resumeQuiz(){
-  var r = S.quiz; if(!r) return;
+  var r = clone(S.quiz); if(!r) return;
   var list = (r.ids||[]).map(function(id){ return QMAP[id]; }).filter(Boolean);
   if(list.length !== (r.ids||[]).length || !list.length){ S.quiz=null; scheduleSave(); renderHome(); return; }
   quiz = { list:list, i:Math.min(r.i||0, list.length), correct:r.correct||0,
@@ -2483,7 +2495,10 @@ document.addEventListener('click', function(ev){
   if(k==='bmren'){
     var t2 = S.bm.filter(function(b){ return b.id===v; })[0];
     if(t2) askText('新しい名前', t2.name, function(nn){
-      if(nn){ t2.name = nn.slice(0,60); scheduleSave(); renderBook(); }
+      if(!nn) return;
+      S.bm = S.bm.map(function(b){
+        return b.id===v ? {id:b.id, topic:b.topic, name:nn.slice(0,60), at:b.at} : b; });
+      scheduleSave(); renderBook();
     });
     return;
   }

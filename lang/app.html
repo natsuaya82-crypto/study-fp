@@ -404,8 +404,14 @@ function sayBtn(text, label){
 var S = { stats:{}, read:{}, sessions:[], marks:{}, bm:[], quiz:null };
 var db = null, dbDoc = null, saveTimer = null, dirty = false, sampleFn = null;
 function loadLocal(){ try{ var r = localStorage.getItem(LS); if(r) merge(JSON.parse(r)); }catch(e){} }
+/* 保存機能から返ってくるデータは読み取り専用で来るので、複製してから取り込む */
+function clone(x){
+  if(x === null || typeof x !== 'object') return x;
+  try{ return JSON.parse(JSON.stringify(x)); }catch(e){ return x; }
+}
 function merge(o){
   if(!o || typeof o !== 'object') return;
+  o = clone(o);
   if(o.stats) for(var k in o.stats){ var a = S.stats[k], b = o.stats[k]; if(!a || (b && (b.t||0) > (a.t||0))) S.stats[k] = b; }
   if(o.read) for(var k2 in o.read){ if(!S.read[k2] || o.read[k2] > S.read[k2]) S.read[k2] = o.read[k2]; }
   if(o.marks) for(var k3 in o.marks){ S.marks[k3] = S.marks[k3] || {}; for(var k4 in o.marks[k3]) S.marks[k3][k4] = o.marks[k3][k4]; }
@@ -465,10 +471,10 @@ function dueAt(id){ var s = stat(id); if(!s) return 0;
   return (s.t||0) + INTERVALS[Math.min(s.st||0, INTERVALS.length-1)]*DAY; }
 function isDue(id){ return dueAt(id) <= Date.now(); }
 function record(id, ok){
-  var s = S.stats[id] || {n:0,w:0,st:0,t:0};
-  s.n = (s.n||0)+1;
-  if(ok) s.st = (s.st||0)+1; else { s.w = (s.w||0)+1; s.st = 0; }
-  s.t = Date.now(); S.stats[id] = s; scheduleSave();
+  var p = S.stats[id] || {};
+  var s = { n:(p.n||0)+1, w:(p.w||0), st:(p.st||0), t:Date.now() };
+  if(ok) s.st = (p.st||0)+1; else { s.w = (p.w||0)+1; s.st = 0; }
+  S.stats[id] = s; scheduleSave();
 }
 function accuracy(list){
   var n = 0, c = 0;
@@ -925,7 +931,7 @@ function saveQuiz(){
   scheduleSave();
 }
 function resumeQuiz(){
-  var r = S.quiz; if(!r) return;
+  var r = clone(S.quiz); if(!r) return;
   var list = (r.ids||[]).map(function(id){ return QMAP[id]; }).filter(Boolean);
   if(list.length !== (r.ids||[]).length || !list.length){ S.quiz = null; scheduleSave(); renderHome(); return; }
   mode = r.ex || 'g';
