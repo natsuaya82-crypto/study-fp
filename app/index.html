@@ -410,6 +410,14 @@ figure.fig figcaption{
   font:inherit; font-size:14px; padding:7px 9px; border:1px solid var(--line-2);
   border-radius:8px; background:var(--card); color:var(--ink);
 }
+#bug{position:fixed; left:12px; right:12px; bottom:calc(72px + env(safe-area-inset-bottom,0px));
+  z-index:70; background:var(--bad); color:#fff; border-radius:var(--r-s); padding:11px 13px;
+  font-size:12.5px; line-height:1.6; box-shadow:0 6px 24px rgba(0,0,0,.35)}
+#bug[hidden]{display:none!important}
+#bug b{display:block; font-size:13px; margin-bottom:3px}
+#bug span{display:block; word-break:break-word; opacity:.9; font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px}
+#bug button{margin-top:8px; background:rgba(255,255,255,.2); border:0; color:#fff;
+  border-radius:7px; padding:6px 12px; font-size:12px; font-weight:700}
 .savebar{font-size:11.5px; color:var(--ink-3); text-align:center; margin-top:14px}
 .savebar.on{color:var(--good)}
 @media (prefers-reduced-motion:no-preference){
@@ -688,7 +696,8 @@ function setSave(st){
   el2.querySelector('.txt').textContent = st==='saving' ? '保存中' : '保存済み';
 }
 function scheduleSave(){
-  dirty = true; saveLocal();
+  dirty = true;
+  try{ saveLocal(); }catch(e){ showBug('端末への保存に失敗しました', e); }
   setSave('saving');
   if(saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(function(){
@@ -2145,11 +2154,40 @@ function tickClock(){
 }
 function pick(i){
   var q = quiz.list[quiz.i];
-  if(quiz.answeredNow) return;
+  /* 解答済みでも、判定が出ていなければ途中で転んだということ。
+     その場合はやり直させる（押しても無反応のまま固まらないように） */
+  if(quiz.answeredNow){
+    var fb0 = document.getElementById('fb');
+    if(fb0 && !fb0.innerHTML){ quiz.answeredNow = false; }
+    else return;
+  }
   quiz.answeredNow = true;
+  /* 1.5秒たっても判定が出ていなければ、どこかで転んだということ。
+     選択肢を押せる状態に戻して、やり直せるようにする */
+  setTimeout(unstick, 1500);
+  try{
+    pickBody(i, q);
+  }catch(err){
+    /* 何が起きても、次へ進む道だけは必ず残す */
+    showBug('解答の処理でつまずきました', err);
+    var fb = document.getElementById('fb');
+    if(fb && !fb.innerHTML){
+      fb.innerHTML = '<div class="verdict '+(i===q.a?'ok':'ng')+'">'+
+        '<div class="v">'+(i===q.a?'◎ 正解':'× 不正解')+'</div><div>'+rich(q.e||'')+'</div></div>'+
+        '<button class="btn primary sticky-act" id="nextBtn">'+
+        (quiz.i+1 >= quiz.list.length ? '結果を見る' : '次の問題へ')+'</button>';
+      var nb2 = document.getElementById('nextBtn');
+      if(nb2) nb2.addEventListener('click', function(){
+        quiz.i++; quiz.answeredNow=false; try{ saveQuiz(); }catch(e){}
+        renderQuiz(); window.scrollTo(0,0); });
+    }
+  }
+}
+function pickBody(i, q){
   var ms = quiz.qStart ? (Date.now() - quiz.qStart) : 0;
   var over = !(ms > 0 && ms <= capMs(quiz.ex));
   stopClock();
+  quiz.untimed = quiz.untimed || 0; quiz.spent = quiz.spent || 0; quiz.timed = quiz.timed || 0;
   quiz.qStart = 0; quiz.qStartIdx = -1;
   if(over) quiz.untimed++; else { quiz.spent += ms; quiz.timed++; }
   var correct = (i === q.a);
@@ -2183,6 +2221,22 @@ function pick(i){
   nb.addEventListener('click', function(){ quiz.i++; quiz.answeredNow=false; saveQuiz(); renderQuiz(); window.scrollTo(0,0); });
   nb.focus({preventScroll:true});
   fb.scrollIntoView({block:'nearest'});
+}
+/* 解答したのに判定が出ていない状態から、自力で戻す */
+function unstick(){
+  if(!quiz || cur !== 'quiz') return;
+  var fb = document.getElementById('fb');
+  if(!fb || fb.innerHTML) return;          /* 判定が出ていれば何もしない */
+  var q = quiz.list[quiz.i];
+  if(!q) return;
+  quiz.answeredNow = false;
+  if(!quiz.qStart){ quiz.qStart = Date.now(); quiz.qStartIdx = quiz.i; startClock(); }
+  Array.prototype.forEach.call(document.querySelectorAll('#opts .opt'), function(b){
+    b.disabled = false;
+    b.classList.remove('ok','ng','tapped');
+    var mk = b.querySelector('.mk'), idx = Number(b.dataset.pick);
+    if(mk) mk.textContent = (q.type === 'ox') ? (idx === 0 ? '○' : '×') : String(idx + 1);
+  });
 }
 function renderResult(){
   var pct = Math.round(quiz.correct/quiz.list.length*100);
@@ -2455,6 +2509,7 @@ document.addEventListener('click', function(ev){
     });
     return;
   }
+  if(k==='bugclose'){ var bel=document.getElementById('bug'); if(bel) bel.hidden=true; return; }
   if(k==='dlgyes'){ confirmDlg(); return; }
   if(k==='dlgno'){ closeDlg(); return; }
 });
@@ -2516,6 +2571,33 @@ document.addEventListener('scroll', function(){
   var bar = document.getElementById('selbar');
   if(bar && !bar.hidden) queueSelBar();
 }, true);
+
+/* ---------- 不具合を見えるようにする ----------
+   公開版はiframeの中で動くので、手元では再現しない不具合がある。
+   黙って止まると原因が分からないため、画面に出して報告できるようにする */
+var bugShown = 0;
+function showBug(where, err){
+  try{
+    if(Date.now() - bugShown < 3000) return;
+    bugShown = Date.now();
+    var msg = (err && (err.message || err)) + '';
+    var el = document.getElementById('bug');
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'bug';
+      document.body.appendChild(el);
+    }
+    el.innerHTML = '<b>'+esc(where)+'</b><span>'+esc(msg).slice(0,200)+'</span>'+
+      '<button data-act="bugclose">閉じる</button>';
+    el.hidden = false;
+  }catch(e){}
+}
+window.addEventListener('error', function(ev){
+  showBug('エラーが起きました', ev && (ev.message || ev.error));
+});
+window.addEventListener('unhandledrejection', function(ev){
+  showBug('保存でエラーが起きました', ev && ev.reason);
+});
 
 /* ---------- boot ---------- */
 function render(){ renderHome(); renderBook(); renderDrill(); renderWeak(); renderRank(); renderAsk(); }
