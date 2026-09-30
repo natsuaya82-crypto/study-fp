@@ -612,8 +612,8 @@ mark.hl{
 var TB = window.FP_TEXTBOOK || {};
 var QS = window.FP_QUESTIONS || [];
 var FIELDS = ['f1','f2','f3','f4','f5','f6'];
-/* sec は本番のペース。学科は60問60分＝1問60秒、実技は20問60分＝1問180秒 */
-var EXAMS = { g:{key:'g', name:'学科', mock:60, per:10, sec:60}, j:{key:'j', name:'実技', mock:20, per:4, sec:180} };
+/* sec は本番のペース。学科は60問90分＝1問90秒、実技は20問60分＝1問180秒 */
+var EXAMS = { g:{key:'g', name:'学科', mock:60, per:10, sec:90}, j:{key:'j', name:'実技', mock:20, per:4, sec:180} };
 /* この時間を超えたら「解いていたのではなく中断していた」とみなす。
    学科は5分、実技は15分。目安時間の5倍を下限300秒で取る */
 function capMs(ex){ return Math.max(300, EXAMS[ex || examScope].sec * 5) * 1000; }
@@ -2301,7 +2301,7 @@ function renderResult(){
       '<div><b>'+pct+'</b><small>正答率</small></div>'+
       '<div><b style="color:'+gr.c+'">'+gr.g+'</b><small>総合 '+total+'</small></div></div>';
     h += '<p class="tiny muted" style="margin:9px 0 0">本番は'+esc(scopeName())+
-      (quiz.ex==='j'?'20問60分＝1問<b>180秒</b>':'60問60分＝1問<b>60秒</b>')+'。'+
+      (quiz.ex==='j'?'20問60分＝1問<b>180秒</b>':'60問90分＝1問<b>90秒</b>')+'。'+
       (avg <= tgt ? '本番ペースに乗っています。' :
        avg <= tgt*1.5 ? 'あと少し。見直しの時間を作るには1問'+tgt+'秒を目標に。' :
        '本番だと時間が足りません。迷ったら飛ばす練習を。')+
