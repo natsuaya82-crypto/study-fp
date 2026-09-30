@@ -335,10 +335,10 @@ figure.fig figcaption{
 .verdict .v{font-weight:700; margin-bottom:5px; display:flex; align-items:center; gap:6px}
 .verdict.ok .v{color:var(--good)}
 .verdict.ng .v{color:var(--bad)}
-.verdict .lnk{margin-top:11px; display:flex; flex-wrap:wrap; gap:8px}
-.verdict .lnk button{background:var(--card); border:1px solid var(--line-2); border-radius:8px;
-  padding:7px 11px; font-size:12.5px; font-weight:700; color:var(--accent-ink); text-align:left}
-.sticky-act{position:sticky; bottom:calc(76px + env(safe-area-inset-bottom,0px)); margin-top:34px}
+.verdict .lnk,.wqlnks{margin-top:8px; display:flex; flex-wrap:wrap; gap:14px}
+.verdict .lnk button,.wqlnk{background:none; border:0; padding:2px 0; font-size:12px;
+  font-weight:700; color:var(--accent-ink); text-decoration:underline; text-align:left}
+.sticky-act{position:sticky; bottom:calc(76px + env(safe-area-inset-bottom,0px)); margin-top:44px}
 
 /* ---- result ---- */
 .score{text-align:center; padding:8px 0 4px}
@@ -1745,7 +1745,7 @@ function thinCard(thin){
 function askEntry(){
   if(!sampleFn) return '';
   return '<div class="card"><p class="eyebrow">わからないことがあったら</p>'+
-    '<p class="tiny muted" style="margin:0 0 10px">教科書や問題の画面にある「質問する」からでも開けます。</p>'+
+    '<p class="tiny muted" style="margin:0 0 10px">教科書の章末や、演習の結果画面（間違えた問題）からでも開けます。</p>'+
     '<button class="btn" data-act="ask">Claudeに質問する</button></div>';
 }
 
@@ -2222,7 +2222,6 @@ function pickBody(i, q){
   h += '<div>'+rich(q.e)+'</div>';
   h += '<div class="lnk">';
   if(info) h += '<button data-act="topic:'+q.t+'">→ 教科書：'+esc(info.t.title)+'</button>';
-  if(sampleFn) h += '<button data-act="askq:'+q.id+'">？ この問題を質問する</button>';
   h += '</div>';
   h += '</div>';
   h += '<button class="btn primary sticky-act" id="nextBtn">'+
@@ -2327,7 +2326,10 @@ function renderResult(){
       h += '<div class="wq"><div class="m">'+fieldChip(q.f)+'</div>';
       h += '<div class="txt">'+rich(q.q)+'</div>';
       h += '<div class="txt muted" style="margin-top:4px">'+rich(q.e)+'</div>';
-      if(info) h += '<div style="margin-top:5px"><button style="background:none;border:0;padding:0;font-size:12px;font-weight:700;color:var(--accent-ink);text-decoration:underline" data-act="topic:'+q.t+'">→ '+esc(info.t.title)+'</button></div>';
+      var lk = '';
+      if(info) lk += '<button class="wqlnk" data-act="topic:'+q.t+'">→ '+esc(info.t.title)+'</button>';
+      if(sampleFn) lk += '<button class="wqlnk" data-act="askq:'+q.id+'">？ 質問する</button>';
+      if(lk) h += '<div class="wqlnks">'+lk+'</div>';
       h += '</div>';
     });
     h += '<button class="btn primary" style="margin-top:12px" data-act="retry">間違えた'+wrong.length+'問をもう一度</button>';
