@@ -2373,14 +2373,35 @@ function renderResult(){
 }
 
 /* ---------- quiz builders ---------- */
+/* 本番の学科は「問1〜30が○×、問31〜60が三答択一」。
+   分野ごとに○×5問・三択5問を取り、その並びで出す。
+   実技は全問が三答択一なので、従来どおり分野から均等に取る */
 function mockSet(){
-  var cfg = EXAMS[examScope], want = cfg.mock, out = [];
-  FIELDS.forEach(function(f){ out = out.concat(shuffle(poolBy(f)).slice(0, cfg.per)); });
-  if(out.length < want){
-    var rest = shuffle(pool().filter(function(q){ return out.indexOf(q)<0; }));
-    out = out.concat(rest.slice(0, want-out.length));
+  var cfg = EXAMS[examScope], want = cfg.mock;
+  if(examScope !== 'g'){
+    var out = [];
+    FIELDS.forEach(function(f){ out = out.concat(shuffle(poolBy(f)).slice(0, cfg.per)); });
+    if(out.length < want){
+      var rest = shuffle(pool().filter(function(q){ return out.indexOf(q)<0; }));
+      out = out.concat(rest.slice(0, want-out.length));
+    }
+    return shuffle(out).slice(0, want);
   }
-  return shuffle(out).slice(0, want);
+  var half = want/2, perHalf = Math.floor(half/FIELDS.length);
+  var ox = [], mc = [];
+  FIELDS.forEach(function(f){
+    var p = poolBy(f);
+    ox = ox.concat(shuffle(p.filter(function(q){ return q.type === 'ox'; })).slice(0, perHalf));
+    mc = mc.concat(shuffle(p.filter(function(q){ return q.type !== 'ox'; })).slice(0, perHalf));
+  });
+  /* 足りない分は分野を問わず補う */
+  function fill(list, want2, isOx){
+    if(list.length >= want2) return list.slice(0, want2);
+    var rest = shuffle(pool().filter(function(q){
+      return (q.type === 'ox') === isOx && list.indexOf(q) < 0; }));
+    return list.concat(rest.slice(0, want2 - list.length));
+  }
+  return shuffle(fill(ox, half, true)).concat(shuffle(fill(mc, half, false)));
 }
 var FIELD_N = 20;
 /* set が付いた問題だけを集める。直前チェック用。
