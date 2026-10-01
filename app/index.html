@@ -1341,6 +1341,22 @@ function renderDrill(){
         '<div class="todo"><span class="t"><b>問1〜'+w3.length+'の型で出題</b>'+
         '<small>本番と同じ並び。毎回ちがう問題が出ます（全'+setList('w3').length+'問から）</small></span>'+
         '<button class="go" data-act="slot:w3">開始</button></div></div>';
+      h += '<div class="card"><p class="eyebrow">型ごとに解く</p>'+
+        '<p class="tiny muted" style="margin:0 0 6px">1つ2〜3問。通しがきついときはここだけ。</p>';
+      for(var si = 1; si <= SLOTS.length; si++){
+        var ql = slotOnly('w3', si);
+        if(!ql.length) continue;
+        var t = tally(ql);
+        var pct = t.n ? Math.round(t.c/t.n*100) : null;
+        h += '<div class="todo"><span class="t">'+
+          '<b style="font-size:13.5px">問'+si+'　'+esc(SLOTS[si-1])+'</b>'+
+          '<small>'+ql.length+'問'+
+          (pct === null ? '・未着手'
+            : '・<b style="color:'+(pct>=60?'var(--good)':'var(--bad)')+'">'+pct+'%</b>（'+t.c+'/'+t.n+'）')+
+          '</small></span>'+
+          '<button class="go" data-act="slotq:'+si+'">解く</button></div>';
+      }
+      h += '</div>';
     }
   }
   h += '<div class="card"><p class="eyebrow">確認テスト</p>';
@@ -2419,11 +2435,20 @@ var FIELD_N = 20;
 /* set が付いた問題だけを集める。直前チェック用。
    w1 は学科、w2 は実技。10/1の模試で落とした論点から作ったもの */
 var SETS = { g:'w1', j:'w2' };
+/* 実技の本番20問の型。問番号ごとに出るものが決まっている */
+var SLOTS = ['FPと関連業法','キャッシュフロー表','バランスシート','6つの係数','公的年金',
+  '株式の投資指標','投資信託','ドルコスト平均法・外貨','建築基準法','登記・公的土地評価',
+  '不動産所得・借地権','保険証券の読み取り','生命保険料控除・課税関係','損害保険の補償範囲',
+  '損益通算・総所得金額','扶養控除・退職所得','一時所得・譲渡所得','法定相続分',
+  '保険金の非課税・相続税の総額','路線価評価・贈与税額'];
 function setList(name){
   return QS.filter(function(q){ return q.set === name; });
 }
 /* 実技は本番の問1〜20で型が決まっている。
    スロットごとに1問ずつ無作為に取り、本番と同じ並びで出す */
+function slotOnly(name, n){
+  return QS.filter(function(q){ return q.set === name && q.slot === n; });
+}
 function slotSet(name){
   var by = {}, max = 0;
   setList(name).forEach(function(q){
@@ -2475,6 +2500,13 @@ document.addEventListener('click', function(ev){
   if(k==='read'){
     if(S.read[v]) delete S.read[v]; else S.read[v] = Date.now();
     scheduleSave(); renderBook(); renderHome(); return;
+  }
+  if(k==='slotq'){
+    var one = shuffle(slotOnly('w3', Number(v)));
+    if(!one.length) return;
+    startQuiz(one, '問' + v + '　' + SLOTS[Number(v)-1], 'drill',
+              {kind:'slotq', f:null, ex:'j'});
+    return;
   }
   if(k==='slot'){
     var tl = slotSet(v);
