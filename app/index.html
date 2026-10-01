@@ -609,6 +609,7 @@ mark.hl{
 <script src="data/j3.js"></script>
 <script src="data/j4.js"></script>
 <script src="data/j5.js"></script>
+<script src="data/j6.js"></script>
 <script>
 (function(){
 "use strict";
@@ -1331,6 +1332,16 @@ function renderDrill(){
       (sqt.n ? '通算 '+Math.round(sqt.c/sqt.n*100)+'%（'+sqt.c+'/'+sqt.n+'）'
              : '10/1の'+esc(scopeName())+'模試で間違えた論点から作った問題')+'</small></span>'+
       '<button class="go" data-act="set:'+sk+'">開始</button></div></div>';
+  }
+  if(examScope === 'j'){
+    var w3 = slotSet('w3');
+    if(w3.length){
+      h += '<div class="card" style="border-color:var(--accent)">'+
+        '<p class="eyebrow" style="color:var(--accent-ink)">本番の型</p>'+
+        '<div class="todo"><span class="t"><b>問1〜'+w3.length+'の型で出題</b>'+
+        '<small>本番と同じ並び。毎回ちがう問題が出ます（全'+setList('w3').length+'問から）</small></span>'+
+        '<button class="go" data-act="slot:w3">開始</button></div></div>';
+    }
   }
   h += '<div class="card"><p class="eyebrow">確認テスト</p>';
   h += '<div class="todo"><span class="t"><b>復習テスト</b><small>'+
@@ -2411,6 +2422,22 @@ var SETS = { g:'w1', j:'w2' };
 function setList(name){
   return QS.filter(function(q){ return q.set === name; });
 }
+/* 実技は本番の問1〜20で型が決まっている。
+   スロットごとに1問ずつ無作為に取り、本番と同じ並びで出す */
+function slotSet(name){
+  var by = {}, max = 0;
+  setList(name).forEach(function(q){
+    if(!q.slot) return;
+    (by[q.slot] = by[q.slot] || []).push(q);
+    if(q.slot > max) max = q.slot;
+  });
+  var out = [];
+  for(var i = 1; i <= max; i++){
+    var g = by[i];
+    if(g && g.length) out.push(shuffle(g)[0]);
+  }
+  return out;
+}
 function pickWeak(n){
   var w = weakList();
   var d = dueList().filter(function(q){ return w.indexOf(q)<0; });
@@ -2448,6 +2475,12 @@ document.addEventListener('click', function(ev){
   if(k==='read'){
     if(S.read[v]) delete S.read[v]; else S.read[v] = Date.now();
     scheduleSave(); renderBook(); renderHome(); return;
+  }
+  if(k==='slot'){
+    var tl = slotSet(v);
+    if(!tl.length) return;
+    startQuiz(tl, '本番の型 ' + tl.length + '問', 'drill', {kind:'slot', f:null, ex:'j'});
+    return;
   }
   if(k==='set'){
     var sl = shuffle(setList(v));
