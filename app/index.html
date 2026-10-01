@@ -604,6 +604,7 @@ mark.hl{
 <script src="data/q10.js"></script>
 <script src="data/q11.js"></script>
 <script src="data/q12.js"></script>
+<script src="data/q13.js"></script>
 <script src="data/j1.js"></script>
 <script src="data/j2.js"></script>
 <script src="data/j3.js"></script>
@@ -1358,6 +1359,17 @@ function renderDrill(){
       }
       h += '</div>';
     }
+  }
+  var f0 = setList('f0');
+  if(f0.length){
+    var f0t = tally(f0);
+    h += '<div class="card" style="border-color:var(--line-2)">'+
+      '<p class="eyebrow">式だけ</p>'+
+      '<div class="todo"><span class="t"><b>解き方を思い出す '+f0.length+'問</b><small>'+
+      '計算しない。どの式か・分母はどっちかだけ'+
+      (f0t.n ? '　通算 '+Math.round(f0t.c/f0t.n*100)+'%' : '')+
+      '</small></span>'+
+      '<button class="go" data-act="set:f0">開始</button></div></div>';
   }
   h += '<div class="card"><p class="eyebrow">確認テスト</p>';
   h += '<div class="todo"><span class="t"><b>復習テスト</b><small>'+
