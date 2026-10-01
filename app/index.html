@@ -607,6 +607,7 @@ mark.hl{
 <script src="data/j2.js"></script>
 <script src="data/j3.js"></script>
 <script src="data/j4.js"></script>
+<script src="data/j5.js"></script>
 <script>
 (function(){
 "use strict";
@@ -1320,15 +1321,15 @@ function renderDrill(){
      : calcMode==='only' ? '電卓を用意して、計算だけを集中して潰すとき用。'
      : '本番と同じ構成。電卓が使える場所で。')+'</p></div>';
 
-  var w1 = setList('w1');
-  if(w1.length && examScope === 'g'){
-    var w1t = tally(w1);
+  var sk = SETS[examScope], sq = setList(sk);
+  if(sq.length){
+    var sqt = tally(sq);
     h += '<div class="card" style="border-color:var(--accent)">'+
       '<p class="eyebrow" style="color:var(--accent-ink)">直前チェック</p>'+
-      '<div class="todo"><span class="t"><b>落とした論点 '+w1.length+'問</b><small>'+
-      (w1t.n ? '通算 '+Math.round(w1t.c/w1t.n*100)+'%（'+w1t.c+'/'+w1t.n+'）'
-             : '10/1の学科模試で間違えた22論点から作った問題')+'</small></span>'+
-      '<button class="go" data-act="set:w1">開始</button></div></div>';
+      '<div class="todo"><span class="t"><b>落とした論点 '+sq.length+'問</b><small>'+
+      (sqt.n ? '通算 '+Math.round(sqt.c/sqt.n*100)+'%（'+sqt.c+'/'+sqt.n+'）'
+             : '10/1の'+esc(scopeName())+'模試で間違えた論点から作った問題')+'</small></span>'+
+      '<button class="go" data-act="set:'+sk+'">開始</button></div></div>';
   }
   h += '<div class="card"><p class="eyebrow">確認テスト</p>';
   h += '<div class="todo"><span class="t"><b>復習テスト</b><small>'+
@@ -2382,11 +2383,12 @@ function mockSet(){
   return shuffle(out).slice(0, want);
 }
 var FIELD_N = 20;
-/* set が付いた問題だけを集める。直前チェック用 */
+/* set が付いた問題だけを集める。直前チェック用。
+   w1 は学科、w2 は実技。10/1の模試で落とした論点から作ったもの */
+var SETS = { g:'w1', j:'w2' };
 function setList(name){
-  return QS.filter(function(q){ return q.set === name && exOf(q) === 'g'; });
+  return QS.filter(function(q){ return q.set === name; });
 }
-var FIELD_N2 = FIELD_N;
 function pickWeak(n){
   var w = weakList();
   var d = dueList().filter(function(q){ return w.indexOf(q)<0; });
@@ -2428,7 +2430,8 @@ document.addEventListener('click', function(ev){
   if(k==='set'){
     var sl = shuffle(setList(v));
     if(!sl.length) return;
-    startQuiz(sl, '直前チェック ' + sl.length + '問', 'drill', {kind:'set', f:null, ex:'g'});
+    startQuiz(sl, '直前チェック ' + sl.length + '問', 'drill',
+              {kind:'set', f:null, ex:exOf(sl[0])});
     return;
   }
   if(k==='field'){
