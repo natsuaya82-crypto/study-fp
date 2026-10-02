@@ -2272,6 +2272,9 @@ function pickBody(i, q){
   quiz.qStart = 0; quiz.qStartIdx = -1;
   if(over) quiz.untimed++; else { quiz.spent += ms; quiz.timed++; }
   var correct = (i === q.a);
+  /* 押し間違いを1回だけ取り消せるように、直前の状態を控えておく */
+  quiz.undo = { id:q.id, i:quiz.i, correct:correct, over:over, ms:ms,
+                prev: S.stats[q.id] ? clone(S.stats[q.id]) : null };
   if(correct) quiz.correct++;
   record(q.id, correct, over ? 0 : ms);
   quiz.log.push({id:q.id, correct:correct, ms:over ? 0 : ms});
@@ -2291,6 +2294,7 @@ function pickBody(i, q){
   h += '<div>'+rich(q.e)+'</div>';
   h += '<div class="lnk">';
   if(info) h += '<button data-act="topic:'+q.t+'">→ 教科書：'+esc(info.t.title)+'</button>';
+  h += '<button data-act="undo" style="color:var(--ink-3)">↩ 押し間違い</button>';
   h += '</div>';
   h += '</div>';
   h += '<button class="btn primary sticky-act" id="nextBtn">'+
@@ -2301,6 +2305,24 @@ function pickBody(i, q){
   nb.addEventListener('click', function(){ quiz.i++; quiz.answeredNow=false; saveQuiz(); renderQuiz(); window.scrollTo(0,0); });
   nb.focus({preventScroll:true});
   fb.scrollIntoView({block:'nearest'});
+}
+/* 押し間違いを取り消して、その問題をもう一度解ける状態に戻す。
+   記録も、正答数も、かかった時間も、押す前に戻す */
+function undoPick(){
+  var u = quiz && quiz.undo;
+  if(!u || u.i !== quiz.i) return;
+  quiz.undo = null;
+  if(u.prev) S.stats[u.id] = u.prev; else delete S.stats[u.id];
+  quiz.log.pop();
+  if(u.correct) quiz.correct--;
+  if(u.over) quiz.untimed--;
+  else { quiz.spent -= u.ms; quiz.timed--; }
+  /* 計測はやり直しになるので、この問題だけ時間を測り直す */
+  quiz.qStart = 0; quiz.qStartIdx = -1;
+  quiz.answeredNow = false;
+  scheduleSave();
+  renderQuiz();
+  window.scrollTo(0, 0);
 }
 /* 解答したのに判定が出ていない状態から、自力で戻す */
 function unstick(){
@@ -2513,6 +2535,7 @@ document.addEventListener('click', function(ev){
     if(S.read[v]) delete S.read[v]; else S.read[v] = Date.now();
     scheduleSave(); renderBook(); renderHome(); return;
   }
+  if(k==='undo'){ undoPick(); return; }
   if(k==='slotq'){
     var one = shuffle(slotOnly('w3', Number(v)));
     if(!one.length) return;
